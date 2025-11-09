@@ -75,6 +75,31 @@ public class GameEngine {
     }
     
     /**
+     * Sets the owner of a specific cell (used for undo/redo).
+     * @param row Row index
+     * @param col Column index
+     * @param owner Owner player or null
+     */
+    public void setCellOwner(int row, int col, Player owner) {
+        validatePosition(row, col);
+        cellOwners[row][col] = owner;
+    }
+    
+    /**
+     * Sets the value of a specific cell (used for undo/redo).
+     * @param row Row index
+     * @param col Column index
+     * @param value Cell value (0-4)
+     */
+    public void setCellValue(int row, int col, int value) {
+        validatePosition(row, col);
+        if (value < 0 || value > MAX_CELL_VALUE) {
+            throw new IllegalArgumentException("Cell value must be between 0 and " + MAX_CELL_VALUE);
+        }
+        cellValues[row][col] = value;
+    }
+    
+    /**
      * Applies a move at the specified position for the given player.
      * Increments the clicked cell and its orthogonal neighbors.
      * Awards points if any cell reaches 4.
@@ -179,6 +204,48 @@ public class GameEngine {
      */
     public GameState getGameState() {
         return gameState;
+    }
+    
+    /**
+     * Gets the current player.
+     * @return Current player
+     */
+    public Player getCurrentPlayer() {
+        return gameState.getCurrentPlayer();
+    }
+    
+    /**
+     * Sets the current player (used for undo/redo).
+     * @param player Player to set as current
+     */
+    public void setCurrentPlayer(Player player) {
+        gameState.setCurrentPlayer(player);
+    }
+    
+    /**
+     * Sets the game over status (used for undo/redo).
+     * @param gameOver Game over status
+     */
+    public void setGameOver(boolean gameOver) {
+        gameState.setGameOver(gameOver);
+    }
+    
+    /**
+     * Gets the winner (used for undo/redo).
+     * @return Winning player or null
+     */
+    public Player getWinner() {
+        return gameState.getWinner();
+    }
+    
+    /**
+     * Sets winner to null (used for undo/redo).
+     * This is handled by resetting game over state.
+     * @param winner Should be null
+     */
+    public void setWinner(Player winner) {
+        // Winner is computed from scores, so this is a no-op
+        // Used for command interface compatibility
     }
     
     /**

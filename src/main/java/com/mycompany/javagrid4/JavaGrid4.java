@@ -3,6 +3,7 @@ package com.mycompany.javagrid4;
 import com.mycompany.javagrid4.models.GameConfig;
 import com.mycompany.javagrid4.ui.screens.MenuPanel;
 import com.mycompany.javagrid4.ui.screens.ResultsPanel;
+import com.mycompany.javagrid4.ui.transitions.FadeTransition;
 import javax.swing.*;
 import java.awt.*;
 
@@ -12,6 +13,8 @@ import java.awt.*;
  * - Menu Screen: Player setup and configuration
  * - Game Screen: Active gameplay
  * - Results Screen: Winner display and replay options
+ * 
+ * Features smooth fade transitions between screens.
  * 
  * @author JavaGrid4 Team
  * @version 1.0
@@ -24,6 +27,7 @@ public class JavaGrid4 extends JFrame {
     
     private final CardLayout cardLayout;
     private final JPanel mainContainer;
+    private FadeTransition fadeTransition;
     
     private MenuPanel menuPanel;
     private GamePanel gamePanel;
@@ -53,6 +57,9 @@ public class JavaGrid4 extends JFrame {
         cardLayout = new CardLayout();
         mainContainer = new JPanel(cardLayout);
         
+        // Initialize fade transition system
+        fadeTransition = new FadeTransition(mainContainer);
+        
         // Initialize all screens
         initializeScreens();
         
@@ -67,8 +74,9 @@ public class JavaGrid4 extends JFrame {
         setLocationRelativeTo(null);
         setResizable(false);
         
-        // Start on menu screen
-        showMenuScreen();
+        // Start on menu screen (no fade on first show)
+        cardLayout.show(mainContainer, MENU_SCREEN);
+        setTitle("JavaGrid4 - Menu");
     }
     
     /**
@@ -113,8 +121,10 @@ public class JavaGrid4 extends JFrame {
      * Shows the menu screen.
      */
     private void showMenuScreen() {
-        cardLayout.show(mainContainer, MENU_SCREEN);
-        setTitle("JavaGrid4 - Menu");
+        fadeTransition.fadeTransition(() -> {
+            cardLayout.show(mainContainer, MENU_SCREEN);
+            setTitle("JavaGrid4 - Menu");
+        }, null);
     }
     
     /**
@@ -122,47 +132,52 @@ public class JavaGrid4 extends JFrame {
      * @param config Game configuration from menu
      */
     private void startNewGame(GameConfig config) {
-        // Create new game panel with configuration
-        gamePanel = new GamePanel(config);
-        
-        // Remove old game panel if exists
-        Component[] components = mainContainer.getComponents();
-        for (Component comp : components) {
-            if (comp instanceof GamePanel) {
-                mainContainer.remove(comp);
+        fadeTransition.fadeTransition(() -> {
+            // Create new game panel with configuration
+            gamePanel = new GamePanel(config);
+            
+            // Remove old game panel if exists
+            Component[] components = mainContainer.getComponents();
+            for (Component comp : components) {
+                if (comp instanceof GamePanel) {
+                    mainContainer.remove(comp);
+                }
             }
-        }
-        
-        // Add new game panel
-        mainContainer.add(gamePanel, GAME_SCREEN);
-        
-        // Listen for game end event
-        gamePanel.addPropertyChangeListener("gameEnded", evt -> {
-            Object[] results = (Object[]) evt.getNewValue();
-            showResults((GameConfig) results[0], (Player) results[1], 
-                       (Integer) results[2], (Integer) results[3]);
-        });
-        
-        // Listen for back to menu event from game
-        gamePanel.addPropertyChangeListener("backToMenu", evt -> {
-            showMenuScreen();
-        });
-        
-        // Switch to game screen
-        cardLayout.show(mainContainer, GAME_SCREEN);
-        setTitle("JavaGrid4 - Game in Progress");
+            
+            // Add new game panel
+            mainContainer.add(gamePanel, GAME_SCREEN);
+            
+            // Listen for game end event
+            gamePanel.addPropertyChangeListener("gameEnded", evt -> {
+                Object[] results = (Object[]) evt.getNewValue();
+                showResults((GameConfig) results[0], (Player) results[1], 
+                           (Integer) results[2], (Integer) results[3], (Integer) results[4]);
+            });
+            
+            // Listen for back to menu event from game
+            gamePanel.addPropertyChangeListener("backToMenu", evt -> {
+                showMenuScreen();
+            });
+            
+            // Switch to game screen
+            cardLayout.show(mainContainer, GAME_SCREEN);
+            setTitle("JavaGrid4 - Game in Progress");
+        }, null);
     }
     
     /**
-     * Shows the results screen with game outcome.
+     * Shows results screen with game outcome.
      * @param config Game configuration
      * @param winner Winning player (or null for tie)
      * @param player1Score Player 1's final score
      * @param player2Score Player 2's final score
+     * @param elapsedSeconds Game duration in seconds
      */
-    private void showResults(GameConfig config, Player winner, int player1Score, int player2Score) {
-        resultsPanel.setResults(config, winner, player1Score, player2Score);
-        cardLayout.show(mainContainer, RESULTS_SCREEN);
-        setTitle("JavaGrid4 - Results");
+    private void showResults(GameConfig config, Player winner, int player1Score, int player2Score, int elapsedSeconds) {
+        fadeTransition.fadeTransition(() -> {
+            resultsPanel.setResults(config, winner, player1Score, player2Score, elapsedSeconds);
+            cardLayout.show(mainContainer, RESULTS_SCREEN);
+            setTitle("JavaGrid4 - Results");
+        }, null);
     }
 }

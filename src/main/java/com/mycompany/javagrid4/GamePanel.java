@@ -1,7 +1,14 @@
 package com.mycompany.javagrid4;
 
+import com.mycompany.javagrid4.audio.SoundManager;
+import com.mycompany.javagrid4.commands.CommandHistory;
+import com.mycompany.javagrid4.commands.MoveCommand;
 import com.mycompany.javagrid4.models.GameConfig;
 import com.mycompany.javagrid4.ui.components.CustomGridCell;
+import com.mycompany.javagrid4.ui.components.GameTimer;
+import com.mycompany.javagrid4.ui.effects.ScoreIncrementAnimation;
+import com.mycompany.javagrid4.ui.effects.GameOverOverlay;
+import com.mycompany.javagrid4.ui.dialogs.HelpDialog;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -17,6 +24,8 @@ import java.beans.PropertyChangeSupport;
  * - ESC: Return to menu (with confirmation)
  * - R: Restart game (with confirmation)
  * - P: Pause/Resume game
+ * - Ctrl+Z: Undo last move
+ * - Ctrl+Y: Redo last undone move
  */
 public class GamePanel extends JPanel {
     private final PropertyChangeSupport propertyChangeSupport;
@@ -24,6 +33,9 @@ public class GamePanel extends JPanel {
     private CustomGridCell[][] gridCells;
     private GameConfig config;
     private boolean isPaused;
+    private CommandHistory commandHistory;
+    private GameTimer gameTimer;
+    private boolean gameStarted;
     
     // GUI Components
     private JPanel topPanel;
@@ -40,6 +52,8 @@ public class GamePanel extends JPanel {
     private JButton restartButton;
     private JButton pauseButton;
     private JButton menuButton;
+    private JButton undoButton;
+    private JButton redoButton;
     
     /**
      * Creates a new GamePanel with game configuration.
@@ -49,7 +63,10 @@ public class GamePanel extends JPanel {
         this.propertyChangeSupport = new PropertyChangeSupport(this);
         this.config = config;
         this.gameEngine = new GameEngine(config.getBoardSize());
+        this.commandHistory = new CommandHistory();
         this.isPaused = false;
+        this.gameTimer = new GameTimer();
+        this.gameStarted = false;
         
         initializeComponents();
         setupLayout();
@@ -87,6 +104,11 @@ public class GamePanel extends JPanel {
         topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         
+        // Timer panel at the top
+        JPanel timerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        timerPanel.setOpaque(false);
+        timerPanel.add(gameTimer);
+        
         titleLabel = new JLabel("JavaGrid4");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 32));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -98,6 +120,8 @@ public class GamePanel extends JPanel {
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
         topPanel.add(Box.createVerticalStrut(10));
+        topPanel.add(timerPanel);
+        topPanel.add(Box.createVerticalStrut(5));
         topPanel.add(titleLabel);
         topPanel.add(Box.createVerticalStrut(5));
         topPanel.add(subtitleLabel);
@@ -144,6 +168,18 @@ public class GamePanel extends JPanel {
         menuButton.addActionListener(e -> handleBackToMenu());
         menuButton.setToolTipText("Back to menu (ESC)");
         
+        // Undo button with icon
+        undoButton = createIconButton("undo.png", "Undo (Ctrl+Z)");
+        undoButton.addActionListener(e -> handleUndo());
+        undoButton.setEnabled(false);
+        
+        // Redo button with icon
+        redoButton = createIconButton("redo.png", "Redo (Ctrl+Y)");
+        redoButton.addActionListener(e -> handleRedo());
+        redoButton.setEnabled(false);
+        
+        controlPanel.add(undoButton);
+        controlPanel.add(redoButton);
         controlPanel.add(restartButton);
         controlPanel.add(pauseButton);
         controlPanel.add(menuButton);
@@ -173,6 +209,59 @@ public class GamePanel extends JPanel {
             BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        
+        // Hover effect
+        button.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent evt) {
+                button.setBackground(bgColor.brighter());
+            }
+            public void mouseExited(MouseEvent evt) {
+                button.setBackground(bgColor);
+            }
+        });
+        
+        return button;
+    }
+    
+    /**
+     * Creates an icon-based button for undo/redo actions.
+     * @param iconName Name of the icon file (e.g., "undo.png")
+     * @param tooltip Tooltip text for the button
+     * @return Styled icon button
+     */
+    private JButton createIconButton(String iconName, String tooltip) {
+        JButton button = new JButton();
+        
+        // Load icon
+        try {
+            java.io.InputStream iconStream = getClass().getResourceAsStream("/icons/" + iconName);
+            if (iconStream != null) {
+                java.awt.image.BufferedImage iconImage = javax.imageio.ImageIO.read(iconStream);
+                java.awt.Image scaledImage = iconImage.getScaledInstance(28, 28, java.awt.Image.SCALE_SMOOTH);
+                button.setIcon(new ImageIcon(scaledImage));
+            } else {
+                // Fallback to text if icon not found
+                button.setText(iconName.contains("undo") ? "↶" : "↷");
+                button.setFont(new Font("Arial", Font.BOLD, 20));
+            }
+        } catch (Exception e) {
+            // Fallback to text emoji
+            button.setText(iconName.contains("undo") ? "↶" : "↷");
+            button.setFont(new Font("Arial", Font.BOLD, 20));
+        }
+        
+        // Button styling
+        Color bgColor = iconName.contains("undo") ? new Color(100, 150, 200) : new Color(100, 180, 150);
+        button.setPreferredSize(new Dimension(50, 40));
+        button.setBackground(bgColor);
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(bgColor.darker(), 2),
+            BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        ));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setToolTipText(tooltip);
         
         // Hover effect
         button.addMouseListener(new MouseAdapter() {
@@ -247,8 +336,15 @@ public class GamePanel extends JPanel {
      * @param clickedCell The cell that was clicked
      */
     private void handleCellClick(CustomGridCell clickedCell) {
-        if (gameEngine.isGameOver()) {
+        if (gameEngine.isGameOver() || isPaused) {
+            SoundManager.getInstance().playSound(SoundManager.SOUND_ERROR);
             return;
+        }
+        
+        // Start timer on first move
+        if (!gameStarted) {
+            gameTimer.start();
+            gameStarted = true;
         }
         
         int row = clickedCell.getRow();
@@ -256,8 +352,27 @@ public class GamePanel extends JPanel {
         
         Player currentPlayer = gameEngine.getGameState().getCurrentPlayer();
         
-        // Apply move through game engine
-        gameEngine.applyMove(row, col, currentPlayer);
+        // Play click sound
+        SoundManager.getInstance().playSound(SoundManager.SOUND_CLICK);
+        
+        // Capture cell values BEFORE the move
+        int gridSize = gameEngine.getGridSize();
+        int[] valuesBefore = new int[5]; // clicked cell + 4 neighbors
+        valuesBefore[0] = gameEngine.getCellValue(row, col);
+        valuesBefore[1] = row > 0 ? gameEngine.getCellValue(row - 1, col) : -1;
+        valuesBefore[2] = row < gridSize - 1 ? gameEngine.getCellValue(row + 1, col) : -1;
+        valuesBefore[3] = col > 0 ? gameEngine.getCellValue(row, col - 1) : -1;
+        valuesBefore[4] = col < gridSize - 1 ? gameEngine.getCellValue(row, col + 1) : -1;
+        
+        // Create and execute move command (supports undo/redo)
+        MoveCommand moveCommand = new MoveCommand(gameEngine, row, col, currentPlayer);
+        commandHistory.executeCommand(moveCommand);
+        
+        // Check if any cells were JUST claimed (changed from <4 to 4)
+        boolean cellsClaimed = checkForNewlyClaimedCells(row, col, valuesBefore);
+        if (cellsClaimed) {
+            SoundManager.getInstance().playSound(SoundManager.SOUND_CLAIM);
+        }
         
         // Switch player
         gameEngine.getGameState().switchPlayer();
@@ -268,10 +383,137 @@ public class GamePanel extends JPanel {
         // Update score and player display
         updateDisplay();
         
+        // Update undo/redo button states
+        updateUndoRedoButtons();
+        
         // Check if game ended
         if (gameEngine.isGameOver()) {
             handleGameEnd();
         }
+    }
+    
+    /**
+     * Checks if any cells were claimed by the move.
+     * @param row Move row
+     * @param col Move column
+     * @return true if cells reached value 4
+     */
+    /**
+     * Checks if any cells were NEWLY claimed (just reached value 4) and triggers animations.
+     * Only animates cells that changed from <4 to 4, not cells already at 4.
+     * @param row The row of the clicked cell
+     * @param col The column of the clicked cell
+     * @param valuesBefore Array of values before the move [clicked, top, bottom, left, right]
+     * @return true if any cells were newly claimed
+     */
+    private boolean checkForNewlyClaimedCells(int row, int col, int[] valuesBefore) {
+        int gridSize = gameEngine.getGridSize();
+        boolean anyNewlyClaimed = false;
+        Player currentPlayer = gameEngine.getGameState().getCurrentPlayer();
+        
+        // Check clicked cell - animate only if it JUST reached 4
+        int currentValue = gameEngine.getCellValue(row, col);
+        if (currentValue == 4 && valuesBefore[0] < 4) {
+            gridCells[row][col].playClaimAnimation();
+            animateScoreIncrement(gridCells[row][col], currentPlayer, 1);
+            anyNewlyClaimed = true;
+        }
+        
+        // Check top neighbor
+        if (row > 0) {
+            currentValue = gameEngine.getCellValue(row - 1, col);
+            if (currentValue == 4 && valuesBefore[1] < 4) {
+                gridCells[row - 1][col].playClaimAnimation();
+                animateScoreIncrement(gridCells[row - 1][col], currentPlayer, 1);
+                anyNewlyClaimed = true;
+            }
+        }
+        
+        // Check bottom neighbor
+        if (row < gridSize - 1) {
+            currentValue = gameEngine.getCellValue(row + 1, col);
+            if (currentValue == 4 && valuesBefore[2] < 4) {
+                gridCells[row + 1][col].playClaimAnimation();
+                animateScoreIncrement(gridCells[row + 1][col], currentPlayer, 1);
+                anyNewlyClaimed = true;
+            }
+        }
+        
+        // Check left neighbor
+        if (col > 0) {
+            currentValue = gameEngine.getCellValue(row, col - 1);
+            if (currentValue == 4 && valuesBefore[3] < 4) {
+                gridCells[row][col - 1].playClaimAnimation();
+                animateScoreIncrement(gridCells[row][col - 1], currentPlayer, 1);
+                anyNewlyClaimed = true;
+            }
+        }
+        
+        // Check right neighbor
+        if (col < gridSize - 1) {
+            currentValue = gameEngine.getCellValue(row, col + 1);
+            if (currentValue == 4 && valuesBefore[4] < 4) {
+                gridCells[row][col + 1].playClaimAnimation();
+                animateScoreIncrement(gridCells[row][col + 1], currentPlayer, 1);
+                anyNewlyClaimed = true;
+            }
+        }
+        
+        return anyNewlyClaimed;
+    }
+    
+    /**
+     * Animates a score increment flying from a cell to the player's score label.
+     * @param cell The cell that was claimed
+     * @param player The player who claimed it
+     * @param points Number of points scored (usually 1)
+     */
+    private void animateScoreIncrement(CustomGridCell cell, Player player, int points) {
+        // Get cell center position in GamePanel coordinates
+        Point cellCenter = new Point(
+            cell.getX() + cell.getWidth() / 2,
+            cell.getY() + cell.getHeight() / 2
+        );
+        
+        // Convert to absolute position within centerPanel
+        Component parent = cell.getParent();
+        while (parent != null && parent != centerPanel) {
+            cellCenter.x += parent.getX();
+            cellCenter.y += parent.getY();
+            parent = parent.getParent();
+        }
+        
+        // Get score label position
+        JLabel scoreLabel = (player == Player.PLAYER_ONE) ? 
+                            player1ScoreLabel : player2ScoreLabel;
+        
+        Point scorePos = new Point(
+            scoreLabel.getX() + scoreLabel.getWidth() / 2,
+            scoreLabel.getY() + scoreLabel.getHeight() / 2
+        );
+        
+        // Convert score label position to same coordinate space
+        parent = scoreLabel.getParent();
+        while (parent != null && parent != this) {
+            scorePos.x += parent.getX();
+            scorePos.y += parent.getY();
+            parent = parent.getParent();
+        }
+        
+        // Get player color
+        Color playerColor = (player == Player.PLAYER_ONE) ? 
+                            config.getPlayer1().getColor() : 
+                            config.getPlayer2().getColor();
+        
+        // Create and start animation
+        ScoreIncrementAnimation animation = new ScoreIncrementAnimation(
+            cellCenter, scorePos, points, playerColor
+        );
+        
+        // Add to this panel (GamePanel) so it's visible over everything
+        add(animation);
+        setComponentZOrder(animation, 0); // Bring to front
+        animation.start();
     }
     
     /**
@@ -319,16 +561,43 @@ public class GamePanel extends JPanel {
     }
     
     /**
-     * Handles game end scenario - transitions to results screen.
+     * Handles game end scenario - shows overlay then transitions to results screen.
      */
     private void handleGameEnd() {
+        // Stop the timer and get elapsed time
+        gameTimer.stop();
+        int elapsedSeconds = gameTimer.getElapsedSeconds();
+        
+        // Play victory sound
+        SoundManager.getInstance().playSound(SoundManager.SOUND_VICTORY);
+        
         Player winner = gameEngine.getGameState().getWinner();
         int player1Score = gameEngine.getScore(Player.PLAYER_ONE);
         int player2Score = gameEngine.getScore(Player.PLAYER_TWO);
         
-        // Fire event with results: [config, winner, player1Score, player2Score]
-        Object[] results = new Object[] { config, winner, player1Score, player2Score };
-        propertyChangeSupport.firePropertyChange("gameEnded", null, results);
+        // Create game over overlay with 2 second display time
+        GameOverOverlay overlay = new GameOverOverlay(
+            winner,
+            config.getPlayer1().getName(),
+            config.getPlayer2().getName(),
+            player1Score,
+            player2Score,
+            config.getPlayer1().getColor(),
+            config.getPlayer2().getColor(),
+            () -> {
+                // After overlay completes, transition to results with elapsed time
+                Object[] results = new Object[] { config, winner, player1Score, player2Score, elapsedSeconds };
+                propertyChangeSupport.firePropertyChange("gameEnded", null, results);
+            }
+        );
+        
+        // Add overlay to cover entire panel
+        overlay.setBounds(0, 0, getWidth(), getHeight());
+        add(overlay);
+        setComponentZOrder(overlay, 0); // Bring to front
+        
+        // Start the overlay animation
+        overlay.start();
     }
     
     /**
@@ -365,6 +634,33 @@ public class GamePanel extends JPanel {
                 handlePause();
             }
         });
+        
+        // Ctrl+Z - Undo
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK), "undo");
+        actionMap.put("undo", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                handleUndo();
+            }
+        });
+        
+        // Ctrl+Y - Redo
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Y, InputEvent.CTRL_DOWN_MASK), "redo");
+        actionMap.put("redo", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                handleRedo();
+            }
+        });
+        
+        // F1 - Help Dialog
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0), "help");
+        actionMap.put("help", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                handleHelp();
+            }
+        });
     }
     
     /**
@@ -373,8 +669,11 @@ public class GamePanel extends JPanel {
      */
     private void handleRestart() {
         if (isPaused) {
+            SoundManager.getInstance().playSound(SoundManager.SOUND_ERROR);
             return; // Don't allow restart while paused
         }
+        
+        SoundManager.getInstance().playSound(SoundManager.SOUND_BUTTON);
         
         int choice = JOptionPane.showConfirmDialog(
             this,
@@ -386,9 +685,73 @@ public class GamePanel extends JPanel {
         
         if (choice == JOptionPane.YES_OPTION) {
             gameEngine.resetBoard();
+            commandHistory.clear(); // Clear undo/redo history
+            gameTimer.reset();
+            gameStarted = false;
             syncGridWithEngine();
             updateDisplay();
+            updateUndoRedoButtons();
         }
+    }
+    
+    /**
+     * Handles undo button/shortcut.
+     * Undoes the last move if available.
+     */
+    private void handleUndo() {
+        if (isPaused || gameEngine.isGameOver()) {
+            SoundManager.getInstance().playSound(SoundManager.SOUND_ERROR);
+            return; // Can't undo while paused or game over
+        }
+        
+        if (commandHistory.undo()) {
+            // Play button sound
+            SoundManager.getInstance().playSound(SoundManager.SOUND_BUTTON);
+            
+            // Switch player back
+            gameEngine.getGameState().switchPlayer();
+            
+            // Update display
+            syncGridWithEngine();
+            updateDisplay();
+            updateUndoRedoButtons();
+        } else {
+            SoundManager.getInstance().playSound(SoundManager.SOUND_ERROR);
+        }
+    }
+    
+    /**
+     * Handles redo button/shortcut.
+     * Redoes the last undone move if available.
+     */
+    private void handleRedo() {
+        if (isPaused || gameEngine.isGameOver()) {
+            SoundManager.getInstance().playSound(SoundManager.SOUND_ERROR);
+            return; // Can't redo while paused or game over
+        }
+        
+        if (commandHistory.redo()) {
+            // Play button sound
+            SoundManager.getInstance().playSound(SoundManager.SOUND_BUTTON);
+            
+            // Switch player forward
+            gameEngine.getGameState().switchPlayer();
+            
+            // Update display
+            syncGridWithEngine();
+            updateDisplay();
+            updateUndoRedoButtons();
+        } else {
+            SoundManager.getInstance().playSound(SoundManager.SOUND_ERROR);
+        }
+    }
+    
+    /**
+     * Updates the enabled state of undo/redo buttons.
+     */
+    private void updateUndoRedoButtons() {
+        undoButton.setEnabled(commandHistory.canUndo() && !gameEngine.isGameOver());
+        redoButton.setEnabled(commandHistory.canRedo() && !gameEngine.isGameOver());
     }
     
     /**
@@ -397,12 +760,15 @@ public class GamePanel extends JPanel {
      */
     private void handlePause() {
         if (gameEngine.isGameOver()) {
+            SoundManager.getInstance().playSound(SoundManager.SOUND_ERROR);
             return; // Can't pause if game is over
         }
         
+        SoundManager.getInstance().playSound(SoundManager.SOUND_BUTTON);
         isPaused = !isPaused;
         
         if (isPaused) {
+            gameTimer.pause();
             pauseButton.setText("Resume (P)");
             pauseButton.setBackground(new Color(70, 160, 70));
             pauseOverlayLabel.setVisible(true);
@@ -414,6 +780,7 @@ public class GamePanel extends JPanel {
                 }
             }
         } else {
+            gameTimer.resume();
             pauseButton.setText("Pause (P)");
             pauseButton.setBackground(new Color(200, 150, 70));
             pauseOverlayLabel.setVisible(false);
@@ -430,10 +797,27 @@ public class GamePanel extends JPanel {
     }
     
     /**
+     * Handles help dialog shortcut (F1).
+     * Opens the help/rules dialog.
+     */
+    private void handleHelp() {
+        SoundManager.getInstance().playSound(SoundManager.SOUND_BUTTON);
+        
+        // Get the parent frame for the dialog
+        Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
+        
+        // Create and show help dialog
+        HelpDialog helpDialog = new HelpDialog(parentFrame);
+        helpDialog.setVisible(true);
+    }
+    
+    /**
      * Handles back to menu button/shortcut.
      * Shows confirmation dialog before exiting to menu.
      */
     private void handleBackToMenu() {
+        SoundManager.getInstance().playSound(SoundManager.SOUND_BUTTON);
+        
         if (gameEngine.isGameOver()) {
             // If game is over, just go back without confirmation
             propertyChangeSupport.firePropertyChange("backToMenu", null, null);

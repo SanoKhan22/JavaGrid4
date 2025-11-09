@@ -44,6 +44,19 @@ public class GameState {
     }
     
     /**
+     * Sets a player's score directly (used for undo/redo).
+     * @param player The player to set score for
+     * @param score The score to set
+     */
+    public void setScore(Player player, int score) {
+        if (player == Player.PLAYER_ONE) {
+            player1Score = score;
+        } else {
+            player2Score = score;
+        }
+    }
+    
+    /**
      * Gets the current active player.
      * @return The player whose turn it is
      */
@@ -56,6 +69,14 @@ public class GameState {
      */
     public void switchPlayer() {
         currentPlayer = currentPlayer.getOpponent();
+    }
+    
+    /**
+     * Sets the current player (used for undo/redo).
+     * @param player The player to set as current
+     */
+    public void setCurrentPlayer(Player player) {
+        this.currentPlayer = player;
     }
     
     /**
@@ -85,6 +106,14 @@ public class GameState {
             return Player.PLAYER_TWO;
         }
         return null; // Tie
+    }
+    
+    /**
+     * Gets both scores as an array (used for undo/redo).
+     * @return Array [player1Score, player2Score]
+     */
+    public int[] getScores() {
+        return new int[]{player1Score, player2Score};
     }
     
     /**

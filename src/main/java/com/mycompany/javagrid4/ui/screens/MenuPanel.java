@@ -1,8 +1,11 @@
 package com.mycompany.javagrid4.ui.screens;
 
+import com.mycompany.javagrid4.audio.SoundManager;
 import com.mycompany.javagrid4.models.GameConfig;
 import com.mycompany.javagrid4.ui.components.ColorPickerButton;
 import com.mycompany.javagrid4.ui.components.BoardSizeCard;
+import com.mycompany.javagrid4.ui.components.SoundControlPanel;
+import com.mycompany.javagrid4.ui.dialogs.HelpDialog;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -10,6 +13,7 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import javax.imageio.ImageIO;
 
 /**
  * Menu screen for player setup and game configuration.
@@ -184,7 +188,7 @@ public class MenuPanel extends JPanel {
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         
-        // Title with subtitle - add more space from top
+        // Title with subtitle and utilities - add more space from top
         JPanel titlePanel = createTitlePanel();
         gbc.gridx = 0;
         gbc.gridy = 0;
@@ -213,14 +217,9 @@ public class MenuPanel extends JPanel {
         gbc.insets = new Insets(20, 10, 20, 10);
         mainPanel.add(createBoardSizePanel(), gbc);
         
-        // Instructions panel
+        // Start button - centered with more space
         gbc.gridy = 3;
-        gbc.insets = new Insets(10, 10, 20, 10);
-        mainPanel.add(createInstructionsPanel(), gbc);
-        
-        // Start button - add space from bottom
-        gbc.gridy = 4;
-        gbc.insets = new Insets(25, 10, 30, 10);
+        gbc.insets = new Insets(35, 10, 15, 10);
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.fill = GridBagConstraints.NONE;
         mainPanel.add(startButton, gbc);
@@ -229,12 +228,16 @@ public class MenuPanel extends JPanel {
     }
     
     /**
-     * Creates the title panel with main title and subtitle.
+     * Creates the title panel with main title, subtitle, and utility controls.
      */
     private JPanel createTitlePanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(getBackground());
+        JPanel outerPanel = new JPanel(new BorderLayout());
+        outerPanel.setBackground(getBackground());
+        
+        // Center panel with title and subtitle
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.setBackground(getBackground());
         
         // Main title
         JLabel titleLabel = new JLabel("JavaGrid4");
@@ -248,11 +251,84 @@ public class MenuPanel extends JPanel {
         subtitleLabel.setForeground(new Color(100, 100, 120));
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
-        panel.add(titleLabel);
-        panel.add(Box.createVerticalStrut(8));
-        panel.add(subtitleLabel);
+        centerPanel.add(titleLabel);
+        centerPanel.add(Box.createVerticalStrut(8));
+        centerPanel.add(subtitleLabel);
         
-        return panel;
+        // Add utility panel to the right
+        outerPanel.add(centerPanel, BorderLayout.CENTER);
+        outerPanel.add(createUtilityPanel(), BorderLayout.EAST);
+        
+        return outerPanel;
+    }
+    
+    /**
+     * Creates a utility panel with sound controls and help button.
+     * Designed with matching sizes and premium styling.
+     */
+    private JPanel createUtilityPanel() {
+        JPanel outerPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
+        outerPanel.setBackground(getBackground());
+        
+        // Container with subtle background and shadow effect
+        JPanel container = new JPanel();
+        container.setLayout(new BoxLayout(container, BoxLayout.X_AXIS));
+        container.setBackground(new Color(248, 250, 255));
+        container.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(220, 230, 245), 2, true),
+            BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        ));
+        
+        // Help button with custom icon
+        JButton helpBtn = new JButton();
+        
+        // Load and set custom help icon
+        try {
+            Image helpImg = ImageIO.read(getClass().getResourceAsStream("/icons/help.png"));
+            ImageIcon helpIcon = new ImageIcon(helpImg.getScaledInstance(28, 28, Image.SCALE_SMOOTH));
+            helpBtn.setIcon(helpIcon);
+        } catch (Exception e) {
+            // Fallback to emoji if icon fails to load
+            helpBtn.setText("📖");
+            helpBtn.setFont(new Font("Arial", Font.PLAIN, 18));
+        }
+        
+        helpBtn.setPreferredSize(new Dimension(45, 45));
+        helpBtn.setMinimumSize(new Dimension(45, 45));
+        helpBtn.setMaximumSize(new Dimension(45, 45));
+        helpBtn.setBackground(new Color(100, 150, 255));
+        helpBtn.setForeground(Color.WHITE);
+        helpBtn.setFocusPainted(false);
+        helpBtn.setBorderPainted(false);
+        helpBtn.setContentAreaFilled(false);
+        helpBtn.setOpaque(false);
+        helpBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        helpBtn.setToolTipText("<html><b>Help & Rules</b><br>View game instructions (F1)</html>");
+        
+        helpBtn.addActionListener(e -> handleHelp());
+        
+        // Vertical separator
+        JPanel separator = new JPanel();
+        separator.setBackground(new Color(200, 210, 230));
+        separator.setPreferredSize(new Dimension(2, 45));
+        separator.setMaximumSize(new Dimension(2, 45));
+        
+        // Sound controls with matching height
+        SoundControlPanel soundPanel = new SoundControlPanel();
+        soundPanel.setupKeyboardShortcut();
+        soundPanel.setPreferredSize(new Dimension(180, 45));
+        soundPanel.setMaximumSize(new Dimension(180, 45));
+        soundPanel.setOpaque(false);
+        
+        container.add(helpBtn);
+        container.add(Box.createHorizontalStrut(10));
+        container.add(separator);
+        container.add(Box.createHorizontalStrut(10));
+        container.add(soundPanel);
+        
+        outerPanel.add(container);
+        
+        return outerPanel;
     }
     
     /**
@@ -353,44 +429,6 @@ public class MenuPanel extends JPanel {
     /**
      * Creates the instructions panel.
      */
-    private JPanel createInstructionsPanel() {
-        JPanel panel = new JPanel();
-        panel.setBackground(new Color(255, 255, 220));
-        panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(200, 200, 150), 2, true),
-            BorderFactory.createEmptyBorder(12, 15, 12, 15)
-        ));
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        
-        JLabel instructionLabel = new JLabel("📋 Game Rules:");
-        instructionLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        instructionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        
-        JLabel rule1 = new JLabel("• Click cells to increment value (0→1→2→3→4)");
-        JLabel rule2 = new JLabel("• Clicking also increments 4 neighboring cells");
-        JLabel rule3 = new JLabel("• Claim a cell when it reaches value 4");
-        JLabel rule4 = new JLabel("• Player with most claimed cells wins!");
-        
-        rule1.setFont(new Font("Arial", Font.PLAIN, 12));
-        rule2.setFont(new Font("Arial", Font.PLAIN, 12));
-        rule3.setFont(new Font("Arial", Font.PLAIN, 12));
-        rule4.setFont(new Font("Arial", Font.PLAIN, 12));
-        
-        rule1.setAlignmentX(Component.CENTER_ALIGNMENT);
-        rule2.setAlignmentX(Component.CENTER_ALIGNMENT);
-        rule3.setAlignmentX(Component.CENTER_ALIGNMENT);
-        rule4.setAlignmentX(Component.CENTER_ALIGNMENT);
-        
-        panel.add(instructionLabel);
-        panel.add(Box.createVerticalStrut(8));
-        panel.add(rule1);
-        panel.add(rule2);
-        panel.add(rule3);
-        panel.add(rule4);
-        
-        return panel;
-    }
-    
     /**
      * Attaches event listeners to all components.
      */
@@ -549,7 +587,25 @@ public class MenuPanel extends JPanel {
      */
     private void handleStartGame() {
         if (gameConfig.isValid()) {
+            SoundManager.getInstance().playSound(SoundManager.SOUND_BUTTON);
             propertyChangeSupport.firePropertyChange("startGame", null, gameConfig);
+        } else {
+            SoundManager.getInstance().playSound(SoundManager.SOUND_ERROR);
         }
+    }
+    
+    /**
+     * Handles the help button click.
+     * Opens the help/rules dialog.
+     */
+    private void handleHelp() {
+        SoundManager.getInstance().playSound(SoundManager.SOUND_BUTTON);
+        
+        // Get the parent frame for the dialog
+        Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
+        
+        // Create and show help dialog
+        HelpDialog helpDialog = new HelpDialog(parentFrame);
+        helpDialog.setVisible(true);
     }
 }

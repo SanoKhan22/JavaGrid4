@@ -73,6 +73,24 @@
   - 8 preset colors + custom color dialog
   - Duplicate color prevention with warning
 
+- **Game Timer** ⏱️
+  - Real-time elapsed time display (MM:SS format)
+  - Color coding: Green (<1 min), Gray (1-5 min), Orange (5+ min)
+  - Pause/resume support integrated with game state
+  - Final time shown in results screen
+
+- **Help System** 📖
+  - In-game help dialog with 5 comprehensive tabs
+  - F1 keyboard shortcut for quick access
+  - Custom icon integration for professional look
+  - ESC key closes dialog
+
+- **Icon-Based Controls**
+  - Custom PNG icons for Undo/Redo buttons
+  - Professional sound control with mute/unmute icons
+  - Help button with custom icon
+  - Compact, space-efficient design
+
 ### 🏗️ Architecture Highlights
 
 ```
@@ -222,14 +240,27 @@ public class ColorPickerButton extends JPanel {
 
 ## 🔮 Future Enhancements
 
-- [ ] Animated screen transitions
-- [ ] Results screen with replay functionality
-- [ ] Undo/Redo move functionality
-- [ ] AI opponent with difficulty levels
-- [ ] Theme system (dark mode, custom colors)
-- [ ] Sound effects and background music
-- [ ] Save/Load game state
-- [ ] Online multiplayer support
+### ✅ Recently Completed
+- [x] Animated screen transitions (fade effects)
+- [x] Results screen with replay functionality
+- [x] Undo/Redo move functionality with Command pattern
+- [x] Sound effects system with mute control
+- [x] Help/Rules dialog with F1 shortcut
+- [x] Game timer display with pause/resume
+- [x] Custom icon integration (undo, redo, help, sound)
+- [x] Game over overlay with zoom animation
+- [x] Score animations and confetti effects
+- [x] Professional menu layout with utility controls
+
+### 🚀 Planned Features
+- [ ] AI opponent with difficulty levels (Easy, Medium, Hard)
+- [ ] Theme system (Classic, Dark mode, Neon)
+- [ ] Game statistics tracking and persistence
+- [ ] Cell claim animations (pop/pulse effects)
+- [ ] Score increment flying animations
+- [ ] Move history display panel
+- [ ] Achievements system
+- [ ] Network multiplayer support
 
 ---
 

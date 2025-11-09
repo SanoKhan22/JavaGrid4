@@ -1,10 +1,12 @@
 package com.mycompany.javagrid4.ui.components;
 
 import com.mycompany.javagrid4.Player;
+import com.mycompany.javagrid4.ui.effects.CellClaimAnimation;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.Ellipse2D;
 import java.awt.geom.RoundRectangle2D;
 
 /**
@@ -15,11 +17,12 @@ import java.awt.geom.RoundRectangle2D;
  * - Hover glow effects
  * - Shadow and depth
  * - Animated transitions
+ * - Claim animations (pop, pulse, burst)
  * 
  * Replaces JButton-based GridCell for superior visual quality.
  * 
  * @author JavaGrid4 Team
- * @version 1.0
+ * @version 1.1
  */
 public class CustomGridCell extends JComponent {
     private static final int CELL_SIZE = 80;
@@ -44,6 +47,12 @@ public class CustomGridCell extends JComponent {
     // State
     private boolean isHovered;
     private boolean isPressed;
+    
+    // Animation properties
+    private double animationScale = 1.0;
+    private float glowIntensity = 0.0f;
+    private CellClaimAnimation.BurstParticle[] burstParticles = null;
+    private boolean isAnimating = false;
     
     /**
      * Creates a CustomGridCell with custom player colors.
@@ -116,15 +125,29 @@ public class CustomGridCell extends JComponent {
         int width = getWidth();
         int height = getHeight();
         
+        // Apply scale transformation if animating
+        if (animationScale != 1.0) {
+            int centerX = width / 2;
+            int centerY = height / 2;
+            g2d.translate(centerX, centerY);
+            g2d.scale(animationScale, animationScale);
+            g2d.translate(-centerX, -centerY);
+        }
+        
         // Draw shadow for depth
         drawShadow(g2d, width, height);
         
         // Draw cell background with gradient
         drawBackground(g2d, width, height);
         
-        // Draw glow effect when hovered
-        if (isHovered && owner == null) {
+        // Draw glow effect when hovered or animated
+        if ((isHovered && owner == null) || glowIntensity > 0) {
             drawHoverGlow(g2d, width, height);
+        }
+        
+        // Draw animated glow for claim animation
+        if (glowIntensity > 0) {
+            drawClaimGlow(g2d, width, height);
         }
         
         // Draw border
@@ -132,6 +155,11 @@ public class CustomGridCell extends JComponent {
         
         // Draw cell value
         drawValue(g2d, width, height);
+        
+        // Draw burst particles if present
+        if (burstParticles != null) {
+            drawBurstParticles(g2d, width, height);
+        }
         
         g2d.dispose();
     }
@@ -281,6 +309,157 @@ public class CustomGridCell extends JComponent {
         int g = Math.max(0, (int) (color.getGreen() * (1 - factor)));
         int b = Math.max(0, (int) (color.getBlue() * (1 - factor)));
         return new Color(r, g, b);
+    }
+    
+    /**
+     * Draws animated glow effect for cell claim.
+     */
+    private void drawClaimGlow(Graphics2D g2d, int width, int height) {
+        if (glowIntensity <= 0) return;
+        
+        // Get player color for glow
+        Color glowColor = getBaseColor();
+        int alpha = (int) (150 * glowIntensity);
+        Color glowWithAlpha = new Color(
+            glowColor.getRed(), 
+            glowColor.getGreen(), 
+            glowColor.getBlue(), 
+            Math.min(255, alpha)
+        );
+        
+        // Draw multiple glow layers for intensity
+        for (int i = 0; i < 3; i++) {
+            int offset = (int) (5 + i * 3 * glowIntensity);
+            g2d.setColor(new Color(
+                glowWithAlpha.getRed(),
+                glowWithAlpha.getGreen(),
+                glowWithAlpha.getBlue(),
+                alpha / (i + 2)
+            ));
+            g2d.setStroke(new BasicStroke(3 - i));
+            g2d.draw(new RoundRectangle2D.Float(
+                -offset, -offset, 
+                width - SHADOW_OFFSET + offset * 2, 
+                height - SHADOW_OFFSET + offset * 2, 
+                CORNER_RADIUS + offset, 
+                CORNER_RADIUS + offset
+            ));
+        }
+    }
+    
+    /**
+     * Draws burst particles for cell claim animation.
+     */
+    private void drawBurstParticles(Graphics2D g2d, int width, int height) {
+        if (burstParticles == null) return;
+        
+        int centerX = (width - SHADOW_OFFSET) / 2;
+        int centerY = (height - SHADOW_OFFSET) / 2;
+        
+        Color particleColor = getBaseColor();
+        
+        for (CellClaimAnimation.BurstParticle particle : burstParticles) {
+            double x = centerX + particle.getX();
+            double y = centerY + particle.getY();
+            double size = particle.getSize();
+            float alpha = particle.getAlpha();
+            
+            // Draw particle as small circle with fade
+            int alphaInt = (int) (255 * alpha);
+            Color particleWithAlpha = new Color(
+                particleColor.getRed(),
+                particleColor.getGreen(),
+                particleColor.getBlue(),
+                Math.max(0, Math.min(255, alphaInt))
+            );
+            
+            g2d.setColor(particleWithAlpha);
+            g2d.fill(new Ellipse2D.Double(
+                x - size / 2,
+                y - size / 2,
+                size,
+                size
+            ));
+            
+            // Add glow around particle
+            Color glowColor = new Color(
+                particleColor.getRed(),
+                particleColor.getGreen(),
+                particleColor.getBlue(),
+                Math.max(0, Math.min(100, alphaInt / 2))
+            );
+            g2d.setColor(glowColor);
+            g2d.fill(new Ellipse2D.Double(
+                x - size,
+                y - size,
+                size * 2,
+                size * 2
+            ));
+        }
+    }
+    
+    // ===== Animation Control Methods =====
+    
+    /**
+     * Sets the animation scale for pop effect.
+     * @param scale Scale factor (1.0 = normal)
+     */
+    public void setAnimationScale(double scale) {
+        this.animationScale = scale;
+    }
+    
+    /**
+     * Sets the glow intensity for pulse effect.
+     * @param intensity Glow intensity (0.0 to 1.0)
+     */
+    public void setGlowIntensity(float intensity) {
+        this.glowIntensity = Math.max(0.0f, Math.min(1.0f, intensity));
+    }
+    
+    /**
+     * Sets burst particles for burst animation.
+     * @param particles Array of particles, or null to clear
+     */
+    public void setBurstParticles(CellClaimAnimation.BurstParticle[] particles) {
+        this.burstParticles = particles;
+    }
+    
+    /**
+     * Plays the claim animation when cell reaches value 4.
+     * Uses combo animation (pop + pulse) by default.
+     */
+    public void playClaimAnimation() {
+        if (isAnimating) return;
+        isAnimating = true;
+        
+        CellClaimAnimation animation = new CellClaimAnimation(this);
+        animation.setAnimationType(CellClaimAnimation.AnimationType.COMBO);
+        animation.play(() -> {
+            isAnimating = false;
+        });
+    }
+    
+    /**
+     * Plays claim animation with specific type.
+     * @param type The animation type to play
+     */
+    public void playClaimAnimation(CellClaimAnimation.AnimationType type) {
+        if (isAnimating) return;
+        isAnimating = true;
+        
+        CellClaimAnimation animation = new CellClaimAnimation(this);
+        animation.setAnimationType(type);
+        animation.play(() -> {
+            isAnimating = false;
+        });
+    }
+    
+    /**
+     * Checks if cell is currently animating.
+     * @return true if animation is in progress
+     */
+    public boolean isAnimating() {
+        return isAnimating;
     }
     
     // ===== Getters and Setters =====

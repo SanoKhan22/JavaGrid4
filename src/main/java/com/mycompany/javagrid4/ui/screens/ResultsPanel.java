@@ -1,7 +1,9 @@
 package com.mycompany.javagrid4.ui.screens;
 
 import com.mycompany.javagrid4.Player;
+import com.mycompany.javagrid4.audio.SoundManager;
 import com.mycompany.javagrid4.models.GameConfig;
+import com.mycompany.javagrid4.ui.effects.ConfettiEffect;
 import javax.swing.*;
 import java.awt.*;
 import java.beans.PropertyChangeListener;
@@ -28,12 +30,14 @@ public class ResultsPanel extends JPanel {
     private Player winner;
     private int player1Score;
     private int player2Score;
+    private int elapsedSeconds;
     
     // UI Components
     private JLabel titleLabel;
     private JLabel winnerLabel;
     private JLabel player1ScoreLabel;
     private JLabel player2ScoreLabel;
+    private JLabel timerLabel;
     private JButton playAgainButton;
     private JButton backToMenuButton;
     
@@ -43,7 +47,7 @@ public class ResultsPanel extends JPanel {
     public ResultsPanel() {
         this.propertyChangeSupport = new PropertyChangeSupport(this);
         
-        setLayout(new BorderLayout());
+        setLayout(null); // Use null layout for overlay support
         setBackground(new Color(240, 240, 245));
         
         initComponents();
@@ -56,12 +60,14 @@ public class ResultsPanel extends JPanel {
      * @param winner Winning player (or null for tie)
      * @param player1Score Player 1's final score
      * @param player2Score Player 2's final score
+     * @param elapsedSeconds Game duration in seconds
      */
-    public void setResults(GameConfig config, Player winner, int player1Score, int player2Score) {
+    public void setResults(GameConfig config, Player winner, int player1Score, int player2Score, int elapsedSeconds) {
         this.gameConfig = config;
         this.winner = winner;
         this.player1Score = player1Score;
         this.player2Score = player2Score;
+        this.elapsedSeconds = elapsedSeconds;
         
         updateDisplay();
     }
@@ -107,6 +113,12 @@ public class ResultsPanel extends JPanel {
         player2ScoreLabel.setFont(new Font("Arial", Font.BOLD, 24));
         player2ScoreLabel.setHorizontalAlignment(SwingConstants.CENTER);
         
+        // Timer label
+        timerLabel = new JLabel();
+        timerLabel.setFont(new Font("Arial", Font.PLAIN, 18));
+        timerLabel.setForeground(new Color(100, 100, 120));
+        timerLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        
         // Play Again button
         playAgainButton = createStyledButton("Play Again", new Color(70, 160, 70));
         playAgainButton.addActionListener(e -> handlePlayAgain());
@@ -146,6 +158,16 @@ public class ResultsPanel extends JPanel {
     }
     
     /**
+     * Creates a visual separator between scores.
+     */
+    private JLabel createScoreSeparator() {
+        JLabel separator = new JLabel(" vs ");
+        separator.setFont(new Font("Arial", Font.BOLD, 20));
+        separator.setForeground(new Color(120, 120, 130));
+        return separator;
+    }
+    
+    /**
      * Lays out all components.
      */
     private void layoutComponents() {
@@ -165,25 +187,26 @@ public class ResultsPanel extends JPanel {
         centerPanel.add(winnerLabel);
         centerPanel.add(Box.createVerticalStrut(40));
         
-        // Score display panel
-        JPanel scoresPanel = new JPanel();
-        scoresPanel.setLayout(new BoxLayout(scoresPanel, BoxLayout.Y_AXIS));
+        // Score display panel - side by side
+        JPanel scoresPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 40, 0));
         scoresPanel.setBackground(new Color(240, 240, 245));
         scoresPanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 210), 2),
             BorderFactory.createEmptyBorder(20, 40, 20, 40)
         ));
         
-        player1ScoreLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         scoresPanel.add(player1ScoreLabel);
-        scoresPanel.add(Box.createVerticalStrut(15));
-        
-        player2ScoreLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        scoresPanel.add(createScoreSeparator());
         scoresPanel.add(player2ScoreLabel);
         
         scoresPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
         centerPanel.add(scoresPanel);
-        centerPanel.add(Box.createVerticalStrut(50));
+        centerPanel.add(Box.createVerticalStrut(20));
+        
+        // Timer display
+        timerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        centerPanel.add(timerLabel);
+        centerPanel.add(Box.createVerticalStrut(40));
         
         // Buttons panel
         JPanel buttonsPanel = new JPanel();
@@ -192,10 +215,12 @@ public class ResultsPanel extends JPanel {
         buttonsPanel.add(playAgainButton);
         buttonsPanel.add(backToMenuButton);
         
-        buttonsPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        centerPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
         centerPanel.add(buttonsPanel);
         
-        add(centerPanel, BorderLayout.CENTER);
+        // Add to panel with absolute positioning for overlay support
+        centerPanel.setBounds(0, 0, 950, 950);
+        add(centerPanel);
     }
     
     /**
@@ -218,17 +243,58 @@ public class ResultsPanel extends JPanel {
         } else if (winner == Player.PLAYER_ONE) {
             winnerLabel.setText(player1Name + " Wins! 🎉");
             winnerLabel.setForeground(player1Color);
+            showConfetti(); // Victory confetti!
         } else {
             winnerLabel.setText(player2Name + " Wins! 🎉");
             winnerLabel.setForeground(player2Color);
+            showConfetti(); // Victory confetti!
         }
         
-        // Update score labels
-        player1ScoreLabel.setText(String.format("%s: %d points", player1Name, player1Score));
+        // Update score labels with cleaner format
+        player1ScoreLabel.setText(String.format("%s: %d", player1Name, player1Score));
         player1ScoreLabel.setForeground(player1Color);
         
-        player2ScoreLabel.setText(String.format("%s: %d points", player2Name, player2Score));
+        player2ScoreLabel.setText(String.format("%s: %d", player2Name, player2Score));
         player2ScoreLabel.setForeground(player2Color);
+        
+        // Update timer label
+        int minutes = elapsedSeconds / 60;
+        int seconds = elapsedSeconds % 60;
+        timerLabel.setText(String.format("⏱️ Game completed in %d:%02d", minutes, seconds));
+        
+        revalidate();
+        repaint();
+    }
+    
+    /**
+     * Shows victory confetti animation.
+     */
+    private void showConfetti() {
+        // Remove any existing confetti
+        Component[] components = getComponents();
+        for (Component comp : components) {
+            if (comp instanceof ConfettiEffect) {
+                remove(comp);
+            }
+        }
+        
+        // Create and add new confetti effect
+        ConfettiEffect confetti = new ConfettiEffect(getWidth(), getHeight());
+        confetti.setBounds(0, 0, getWidth(), getHeight());
+        add(confetti);
+        
+        // Move confetti to top layer
+        setComponentZOrder(confetti, 0);
+        
+        // Start animation
+        confetti.start();
+        
+        // Auto-remove when complete
+        confetti.setOnComplete(() -> {
+            remove(confetti);
+            revalidate();
+            repaint();
+        });
         
         revalidate();
         repaint();
@@ -239,6 +305,7 @@ public class ResultsPanel extends JPanel {
      * Fires "playAgain" event with same GameConfig.
      */
     private void handlePlayAgain() {
+        SoundManager.getInstance().playSound(SoundManager.SOUND_BUTTON);
         propertyChangeSupport.firePropertyChange("playAgain", null, gameConfig);
     }
     
@@ -247,6 +314,7 @@ public class ResultsPanel extends JPanel {
      * Fires "backToMenu" event.
      */
     private void handleBackToMenu() {
+        SoundManager.getInstance().playSound(SoundManager.SOUND_BUTTON);
         propertyChangeSupport.firePropertyChange("backToMenu", null, null);
     }
 }
