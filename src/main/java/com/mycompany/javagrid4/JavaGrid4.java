@@ -143,6 +143,11 @@ public class JavaGrid4 extends JFrame {
                        (Integer) results[2], (Integer) results[3]);
         });
         
+        // Listen for back to menu event from game
+        gamePanel.addPropertyChangeListener("backToMenu", evt -> {
+            showMenuScreen();
+        });
+        
         // Switch to game screen
         cardLayout.show(mainContainer, GAME_SCREEN);
         setTitle("JavaGrid4 - Game in Progress");
