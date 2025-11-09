@@ -1,5 +1,6 @@
 package com.mycompany.javagrid4;
 
+import com.mycompany.javagrid4.models.GameConfig;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -10,30 +11,30 @@ import java.awt.event.ActionEvent;
  * Delegates game logic to GameEngine.
  */
 public class GamePanel extends JPanel {
-    private static final int DEFAULT_GRID_SIZE = 3;
-    private static final String[] GRID_SIZE_OPTIONS = {"3x3", "5x5", "7x7"};
-    
     private GameEngine gameEngine;
     private GridCell[][] gridCells;
+    private GameConfig config;
     
     // GUI Components
     private JPanel topPanel;
     private JPanel centerPanel;
     private JPanel bottomPanel;
     
-    private JComboBox<String> sizeSelector;
+    private JLabel titleLabel;
     private JLabel currentPlayerLabel;
     private JLabel player1ScoreLabel;
     private JLabel player2ScoreLabel;
     
     /**
-     * Creates a new GamePanel with default grid size.
+     * Creates a new GamePanel with game configuration.
+     * @param config Game configuration with player names, colors, and board size
      */
-    public GamePanel() {
-        this.gameEngine = new GameEngine(DEFAULT_GRID_SIZE);
+    public GamePanel(GameConfig config) {
+        this.config = config;
+        this.gameEngine = new GameEngine(config.getBoardSize());
         initializeComponents();
         setupLayout();
-        createGrid(DEFAULT_GRID_SIZE);
+        createGrid(config.getBoardSize());
         updateDisplay();
     }
     
@@ -42,19 +43,27 @@ public class GamePanel extends JPanel {
      */
     private void initializeComponents() {
         setLayout(new BorderLayout(10, 10));
-        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         
-        // Top panel with size selector
-        topPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        JLabel sizeLabel = new JLabel("Board Size:");
-        sizeLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        // Top panel with game title
+        topPanel = new JPanel();
+        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         
-        sizeSelector = new JComboBox<>(GRID_SIZE_OPTIONS);
-        sizeSelector.setFont(new Font("Arial", Font.PLAIN, 14));
-        sizeSelector.addActionListener(this::handleSizeChange);
+        titleLabel = new JLabel("JavaGrid4");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 32));
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
-        topPanel.add(sizeLabel);
-        topPanel.add(sizeSelector);
+        JLabel subtitleLabel = new JLabel(String.format("%dx%d Board", 
+            config.getBoardSize(), config.getBoardSize()));
+        subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        subtitleLabel.setForeground(Color.GRAY);
+        subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        topPanel.add(Box.createVerticalStrut(10));
+        topPanel.add(titleLabel);
+        topPanel.add(Box.createVerticalStrut(5));
+        topPanel.add(subtitleLabel);
+        topPanel.add(Box.createVerticalStrut(10));
         
         // Center panel for grid
         centerPanel = new JPanel();
@@ -62,16 +71,17 @@ public class GamePanel extends JPanel {
         // Bottom panel with scores and current player
         bottomPanel = new JPanel(new GridLayout(1, 3, 10, 0));
         
-        player1ScoreLabel = new JLabel("Player 1: 0", SwingConstants.CENTER);
-        player1ScoreLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        player1ScoreLabel.setForeground(new Color(255, 50, 50));
+        player1ScoreLabel = new JLabel(config.getPlayer1().getName() + ": 0", SwingConstants.CENTER);
+        player1ScoreLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        player1ScoreLabel.setForeground(config.getPlayer1().getColor());
         
-        currentPlayerLabel = new JLabel("Current: Player 1", SwingConstants.CENTER);
-        currentPlayerLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        currentPlayerLabel = new JLabel("Current: " + config.getPlayer1().getName(), SwingConstants.CENTER);
+        currentPlayerLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        currentPlayerLabel.setForeground(config.getPlayer1().getColor());
         
-        player2ScoreLabel = new JLabel("Player 2: 0", SwingConstants.CENTER);
-        player2ScoreLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        player2ScoreLabel.setForeground(new Color(50, 100, 255));
+        player2ScoreLabel = new JLabel(config.getPlayer2().getName() + ": 0", SwingConstants.CENTER);
+        player2ScoreLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        player2ScoreLabel.setForeground(config.getPlayer2().getColor());
         
         bottomPanel.add(player1ScoreLabel);
         bottomPanel.add(currentPlayerLabel);
@@ -97,9 +107,12 @@ public class GamePanel extends JPanel {
         
         gridCells = new GridCell[size][size];
         
+        Color player1Color = config.getPlayer1().getColor();
+        Color player2Color = config.getPlayer2().getColor();
+        
         for (int row = 0; row < size; row++) {
             for (int col = 0; col < size; col++) {
-                GridCell cell = new GridCell(row, col);
+                GridCell cell = new GridCell(row, col, player1Color, player2Color);
                 cell.addActionListener(this::handleCellClick);
                 gridCells[row][col] = cell;
                 centerPanel.add(cell);
@@ -144,24 +157,6 @@ public class GamePanel extends JPanel {
     }
     
     /**
-     * Handles board size change events.
-     * @param event Action event from size selector
-     */
-    private void handleSizeChange(ActionEvent event) {
-        String selected = (String) sizeSelector.getSelectedItem();
-        int newSize = Integer.parseInt(selected.substring(0, 1));
-        
-        // Change grid size in engine
-        gameEngine.changeGridSize(newSize);
-        
-        // Recreate visual grid
-        createGrid(newSize);
-        
-        // Update display
-        updateDisplay();
-    }
-    
-    /**
      * Synchronizes visual grid cells with engine state.
      */
     private void syncGridWithEngine() {
@@ -183,11 +178,26 @@ public class GamePanel extends JPanel {
         int player2Score = gameEngine.getScore(Player.PLAYER_TWO);
         Player currentPlayer = gameEngine.getGameState().getCurrentPlayer();
         
-        player1ScoreLabel.setText(String.format("%s: %d", 
-            Player.PLAYER_ONE.getDisplayName(), player1Score));
-        player2ScoreLabel.setText(String.format("%s: %d", 
-            Player.PLAYER_TWO.getDisplayName(), player2Score));
-        currentPlayerLabel.setText("Current: " + currentPlayer.getDisplayName());
+        // Get player names and colors from config
+        String player1Name = config.getPlayer1().getName();
+        String player2Name = config.getPlayer2().getName();
+        Color player1Color = config.getPlayer1().getColor();
+        Color player2Color = config.getPlayer2().getColor();
+        
+        player1ScoreLabel.setText(String.format("%s: %d", player1Name, player1Score));
+        player1ScoreLabel.setForeground(player1Color);
+        
+        player2ScoreLabel.setText(String.format("%s: %d", player2Name, player2Score));
+        player2ScoreLabel.setForeground(player2Color);
+        
+        // Update current player display
+        if (currentPlayer == Player.PLAYER_ONE) {
+            currentPlayerLabel.setText("Current: " + player1Name);
+            currentPlayerLabel.setForeground(player1Color);
+        } else {
+            currentPlayerLabel.setText("Current: " + player2Name);
+            currentPlayerLabel.setForeground(player2Color);
+        }
     }
     
     /**
@@ -197,15 +207,19 @@ public class GamePanel extends JPanel {
         Player winner = gameEngine.getGameState().getWinner();
         String message;
         
+        String player1Name = config.getPlayer1().getName();
+        String player2Name = config.getPlayer2().getName();
+        
         if (winner == null) {
             message = "Game Over! It's a tie!\n";
         } else {
-            message = String.format("Game Over! %s wins!\n", winner.getDisplayName());
+            String winnerName = (winner == Player.PLAYER_ONE) ? player1Name : player2Name;
+            message = String.format("Game Over! %s wins!\n", winnerName);
         }
         
         message += String.format("%s: %d points\n%s: %d points\n\nStart a new game?",
-            Player.PLAYER_ONE.getDisplayName(), gameEngine.getScore(Player.PLAYER_ONE),
-            Player.PLAYER_TWO.getDisplayName(), gameEngine.getScore(Player.PLAYER_TWO));
+            player1Name, gameEngine.getScore(Player.PLAYER_ONE),
+            player2Name, gameEngine.getScore(Player.PLAYER_TWO));
         
         int choice = JOptionPane.showConfirmDialog(
             this,

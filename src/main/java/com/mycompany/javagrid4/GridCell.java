@@ -11,24 +11,39 @@ public class GridCell extends JButton {
     private static final int CELL_SIZE = 80;
     private static final int FONT_SIZE = 24;
     private static final Color NEUTRAL_COLOR = new Color(200, 200, 200);
-    private static final Color PLAYER1_COLOR = new Color(255, 100, 100);
-    private static final Color PLAYER2_COLOR = new Color(100, 150, 255);
     
     private final int row;
     private final int column;
     private int cellValue;
     private Player owner;
     
+    // Custom player colors
+    private Color player1Color;
+    private Color player2Color;
+    
     /**
-     * Creates a new GridCell at the specified position.
+     * Creates a new GridCell at the specified position with default colors.
      * @param row The row index in the grid
      * @param column The column index in the grid
      */
     public GridCell(int row, int column) {
+        this(row, column, new Color(255, 100, 100), new Color(100, 150, 255));
+    }
+    
+    /**
+     * Creates a new GridCell at the specified position with custom player colors.
+     * @param row The row index in the grid
+     * @param column The column index in the grid
+     * @param player1Color Color for Player 1
+     * @param player2Color Color for Player 2
+     */
+    public GridCell(int row, int column, Color player1Color, Color player2Color) {
         this.row = row;
         this.column = column;
         this.cellValue = 0;
         this.owner = null;
+        this.player1Color = player1Color;
+        this.player2Color = player2Color;
         
         initializeAppearance();
     }
@@ -103,9 +118,9 @@ public class GridCell extends JButton {
         if (owner == null) {
             setBackground(NEUTRAL_COLOR);
         } else if (owner == Player.PLAYER_ONE) {
-            setBackground(PLAYER1_COLOR);
+            setBackground(player1Color);
         } else {
-            setBackground(PLAYER2_COLOR);
+            setBackground(player2Color);
         }
     }
     

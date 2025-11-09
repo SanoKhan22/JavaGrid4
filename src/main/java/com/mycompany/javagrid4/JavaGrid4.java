@@ -111,7 +111,7 @@ public class JavaGrid4 extends JFrame {
      */
     private void startNewGame(GameConfig config) {
         // Create new game panel with configuration
-        gamePanel = new GamePanel();
+        gamePanel = new GamePanel(config);
         
         // Remove old game panel if exists
         Component[] components = mainContainer.getComponents();
@@ -123,9 +123,6 @@ public class JavaGrid4 extends JFrame {
         
         // Add new game panel
         mainContainer.add(gamePanel, GAME_SCREEN);
-        
-        // TODO: Apply config to game panel (player names, colors, board size)
-        // This will be implemented when we update GamePanel
         
         // Switch to game screen
         cardLayout.show(mainContainer, GAME_SCREEN);

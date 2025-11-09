@@ -76,6 +76,15 @@ public class MenuPanel extends JPanel {
     }
     
     /**
+     * Adds a property change listener for a specific property.
+     * @param propertyName Name of the property to listen for
+     * @param listener The listener to add
+     */
+    public void addPropertyChangeListener(String propertyName, PropertyChangeListener listener) {
+        propertyChangeSupport.addPropertyChangeListener(propertyName, listener);
+    }
+    
+    /**
      * Initializes all UI components.
      */
     private void initComponents() {
