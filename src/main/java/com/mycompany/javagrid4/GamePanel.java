@@ -1,9 +1,11 @@
 package com.mycompany.javagrid4;
 
 import com.mycompany.javagrid4.models.GameConfig;
+import com.mycompany.javagrid4.ui.components.CustomGridCell;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 /**
  * Main GUI controller for JavaGrid4.
@@ -12,7 +14,7 @@ import java.awt.event.ActionEvent;
  */
 public class GamePanel extends JPanel {
     private GameEngine gameEngine;
-    private GridCell[][] gridCells;
+    private CustomGridCell[][] gridCells;
     private GameConfig config;
     
     // GUI Components
@@ -105,15 +107,23 @@ public class GamePanel extends JPanel {
         centerPanel.removeAll();
         centerPanel.setLayout(new GridLayout(size, size, 5, 5));
         
-        gridCells = new GridCell[size][size];
+        gridCells = new CustomGridCell[size][size];
         
         Color player1Color = config.getPlayer1().getColor();
         Color player2Color = config.getPlayer2().getColor();
         
         for (int row = 0; row < size; row++) {
             for (int col = 0; col < size; col++) {
-                GridCell cell = new GridCell(row, col, player1Color, player2Color);
-                cell.addActionListener(this::handleCellClick);
+                CustomGridCell cell = new CustomGridCell(row, col, player1Color, player2Color);
+                
+                // Add mouse listener for clicks
+                cell.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        handleCellClick(cell);
+                    }
+                });
+                
                 gridCells[row][col] = cell;
                 centerPanel.add(cell);
             }
@@ -125,14 +135,13 @@ public class GamePanel extends JPanel {
     
     /**
      * Handles cell click events.
-     * @param event Action event from clicked cell
+     * @param clickedCell The cell that was clicked
      */
-    private void handleCellClick(ActionEvent event) {
+    private void handleCellClick(CustomGridCell clickedCell) {
         if (gameEngine.isGameOver()) {
             return;
         }
         
-        GridCell clickedCell = (GridCell) event.getSource();
         int row = clickedCell.getRow();
         int col = clickedCell.getColumn();
         
@@ -163,7 +172,7 @@ public class GamePanel extends JPanel {
         int size = gameEngine.getGridSize();
         for (int row = 0; row < size; row++) {
             for (int col = 0; col < size; col++) {
-                GridCell cell = gridCells[row][col];
+                CustomGridCell cell = gridCells[row][col];
                 cell.setCellValue(gameEngine.getCellValue(row, col));
                 cell.setOwner(gameEngine.getCellOwner(row, col));
             }
