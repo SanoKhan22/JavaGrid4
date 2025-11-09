@@ -2,6 +2,7 @@ package com.mycompany.javagrid4;
 
 import com.mycompany.javagrid4.models.GameConfig;
 import com.mycompany.javagrid4.ui.screens.MenuPanel;
+import com.mycompany.javagrid4.ui.screens.ResultsPanel;
 import javax.swing.*;
 import java.awt.*;
 
@@ -26,7 +27,7 @@ public class JavaGrid4 extends JFrame {
     
     private MenuPanel menuPanel;
     private GamePanel gamePanel;
-    // ResultsPanel will be added later
+    private ResultsPanel resultsPanel;
     
     /**
      * Main entry point - launches the JavaGrid4 game window.
@@ -78,10 +79,12 @@ public class JavaGrid4 extends JFrame {
         menuPanel = new MenuPanel();
         mainContainer.add(menuPanel, MENU_SCREEN);
         
+        // Create results screen
+        resultsPanel = new ResultsPanel();
+        mainContainer.add(resultsPanel, RESULTS_SCREEN);
+        
         // Game panel will be created dynamically when game starts
         // (because it needs GameConfig from menu)
-        
-        // Results panel will be added in next phase
     }
     
     /**
@@ -94,7 +97,16 @@ public class JavaGrid4 extends JFrame {
             startNewGame(config);
         });
         
-        // Game panel transitions will be added after we create it
+        // Listen for "playAgain" event from ResultsPanel
+        resultsPanel.addPropertyChangeListener("playAgain", evt -> {
+            GameConfig config = (GameConfig) evt.getNewValue();
+            startNewGame(config);
+        });
+        
+        // Listen for "backToMenu" event from ResultsPanel
+        resultsPanel.addPropertyChangeListener("backToMenu", evt -> {
+            showMenuScreen();
+        });
     }
     
     /**
@@ -124,8 +136,28 @@ public class JavaGrid4 extends JFrame {
         // Add new game panel
         mainContainer.add(gamePanel, GAME_SCREEN);
         
+        // Listen for game end event
+        gamePanel.addPropertyChangeListener("gameEnded", evt -> {
+            Object[] results = (Object[]) evt.getNewValue();
+            showResults((GameConfig) results[0], (Player) results[1], 
+                       (Integer) results[2], (Integer) results[3]);
+        });
+        
         // Switch to game screen
         cardLayout.show(mainContainer, GAME_SCREEN);
         setTitle("JavaGrid4 - Game in Progress");
+    }
+    
+    /**
+     * Shows the results screen with game outcome.
+     * @param config Game configuration
+     * @param winner Winning player (or null for tie)
+     * @param player1Score Player 1's final score
+     * @param player2Score Player 2's final score
+     */
+    private void showResults(GameConfig config, Player winner, int player1Score, int player2Score) {
+        resultsPanel.setResults(config, winner, player1Score, player2Score);
+        cardLayout.show(mainContainer, RESULTS_SCREEN);
+        setTitle("JavaGrid4 - Results");
     }
 }

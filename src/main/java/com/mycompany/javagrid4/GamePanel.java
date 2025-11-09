@@ -6,6 +6,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 
 /**
  * Main GUI controller for JavaGrid4.
@@ -13,6 +15,7 @@ import java.awt.event.MouseEvent;
  * Delegates game logic to GameEngine.
  */
 public class GamePanel extends JPanel {
+    private final PropertyChangeSupport propertyChangeSupport;
     private GameEngine gameEngine;
     private CustomGridCell[][] gridCells;
     private GameConfig config;
@@ -32,12 +35,31 @@ public class GamePanel extends JPanel {
      * @param config Game configuration with player names, colors, and board size
      */
     public GamePanel(GameConfig config) {
+        this.propertyChangeSupport = new PropertyChangeSupport(this);
         this.config = config;
         this.gameEngine = new GameEngine(config.getBoardSize());
         initializeComponents();
         setupLayout();
         createGrid(config.getBoardSize());
         updateDisplay();
+    }
+    
+    /**
+     * Adds a property change listener for screen transitions.
+     * Event "gameEnded" fired with results array when game ends.
+     */
+    @Override
+    public void addPropertyChangeListener(PropertyChangeListener listener) {
+        propertyChangeSupport.addPropertyChangeListener(listener);
+    }
+    
+    /**
+     * Adds a property change listener for a specific property.
+     * @param propertyName Name of the property to listen for
+     * @param listener The listener to add
+     */
+    public void addPropertyChangeListener(String propertyName, PropertyChangeListener listener) {
+        propertyChangeSupport.addPropertyChangeListener(propertyName, listener);
     }
     
     /**
@@ -210,45 +232,15 @@ public class GamePanel extends JPanel {
     }
     
     /**
-     * Handles game end scenario - shows winner and offers restart.
+     * Handles game end scenario - transitions to results screen.
      */
     private void handleGameEnd() {
         Player winner = gameEngine.getGameState().getWinner();
-        String message;
+        int player1Score = gameEngine.getScore(Player.PLAYER_ONE);
+        int player2Score = gameEngine.getScore(Player.PLAYER_TWO);
         
-        String player1Name = config.getPlayer1().getName();
-        String player2Name = config.getPlayer2().getName();
-        
-        if (winner == null) {
-            message = "Game Over! It's a tie!\n";
-        } else {
-            String winnerName = (winner == Player.PLAYER_ONE) ? player1Name : player2Name;
-            message = String.format("Game Over! %s wins!\n", winnerName);
-        }
-        
-        message += String.format("%s: %d points\n%s: %d points\n\nStart a new game?",
-            player1Name, gameEngine.getScore(Player.PLAYER_ONE),
-            player2Name, gameEngine.getScore(Player.PLAYER_TWO));
-        
-        int choice = JOptionPane.showConfirmDialog(
-            this,
-            message,
-            "Game Over",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.INFORMATION_MESSAGE
-        );
-        
-        if (choice == JOptionPane.YES_OPTION) {
-            restartGame();
-        }
-    }
-    
-    /**
-     * Restarts the game with current grid size.
-     */
-    private void restartGame() {
-        gameEngine.resetBoard();
-        syncGridWithEngine();
-        updateDisplay();
+        // Fire event with results: [config, winner, player1Score, player2Score]
+        Object[] results = new Object[] { config, winner, player1Score, player2Score };
+        propertyChangeSupport.firePropertyChange("gameEnded", null, results);
     }
 }
