@@ -5,6 +5,11 @@ import com.mycompany.javagrid4.commands.CommandHistory;
 import com.mycompany.javagrid4.commands.MoveCommand;
 import com.mycompany.javagrid4.models.GameConfig;
 import com.mycompany.javagrid4.ui.components.CustomGridCell;
+import com.mycompany.javagrid4.ui.components.ScoreCard;
+import com.mycompany.javagrid4.ui.components.ControlCard;
+import com.mycompany.javagrid4.ui.components.TurnIndicator;
+import com.mycompany.javagrid4.ui.components.PauseOverlay;
+import com.mycompany.javagrid4.ui.components.GridContainer;
 import com.mycompany.javagrid4.ui.components.GameTimer;
 import com.mycompany.javagrid4.ui.effects.ScoreIncrementAnimation;
 import com.mycompany.javagrid4.ui.effects.GameOverOverlay;
@@ -40,15 +45,32 @@ public class GamePanel extends JPanel {
     // GUI Components
     private JPanel topPanel;
     private JPanel centerPanel;
+    private GridContainer gridContainer;
     private JPanel bottomPanel;
     private JPanel controlPanel;
     
     private JLabel titleLabel;
-    private JLabel currentPlayerLabel;
+    private JLabel currentPlayerLabel; // Legacy (kept for compatibility)
     private JLabel player1ScoreLabel;
     private JLabel player2ScoreLabel;
-    private JLabel pauseOverlayLabel;
+    private JLabel pauseOverlayLabel; // Legacy (kept for compatibility)
     
+    // Material Design components
+    private TurnIndicator turnIndicator;
+    private PauseOverlay pauseOverlay;
+    private ScoreCard player1Card;
+    private ScoreCard currentTurnCard;
+    private ScoreCard player2Card;
+    
+    // Material Design Control Cards
+    private ControlCard restartCard;
+    private ControlCard undoCard;
+    private ControlCard redoCard;
+    private ControlCard helpCard;
+    private ControlCard menuCard;
+    private ControlCard pauseCard;
+    
+    // Legacy buttons (kept for compatibility)
     private JButton restartButton;
     private JButton pauseButton;
     private JButton menuButton;
@@ -68,11 +90,52 @@ public class GamePanel extends JPanel {
         this.gameTimer = new GameTimer();
         this.gameStarted = false;
         
+        // Enable glassmorphism background
+        setOpaque(false);
+        
         initializeComponents();
         setupLayout();
         createGrid(config.getBoardSize());
         setupKeyboardShortcuts();
         updateDisplay();
+    }
+    
+    /**
+     * Custom paint component for Material Design gradient background.
+     */
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g.create();
+        
+        // Enable antialiasing and high-quality rendering
+        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        
+        int width = getWidth();
+        int height = getHeight();
+        
+        // Create diagonal gradient from light blue-gray to light purple-gray
+        Color topLeft = new Color(235, 242, 250);      // Light blue-gray
+        Color bottomRight = new Color(242, 237, 250);  // Light purple-gray
+        
+        GradientPaint gradient = new GradientPaint(
+            0, 0, topLeft,
+            width, height, bottomRight
+        );
+        
+        g2d.setPaint(gradient);
+        g2d.fillRect(0, 0, width, height);
+        
+        // Add subtle texture overlay with dots pattern
+        g2d.setColor(new Color(255, 255, 255, 15)); // Very subtle white
+        for (int y = 0; y < height; y += 20) {
+            for (int x = 0; x < width; x += 20) {
+                g2d.fillOval(x, y, 2, 2);
+            }
+        }
+        
+        g2d.dispose();
     }
     
     /**
@@ -103,6 +166,7 @@ public class GamePanel extends JPanel {
         // Top panel with game title
         topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
+        topPanel.setOpaque(false); // Transparent for glassmorphism
         
         // Timer panel at the top
         JPanel timerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -127,64 +191,120 @@ public class GamePanel extends JPanel {
         topPanel.add(subtitleLabel);
         topPanel.add(Box.createVerticalStrut(10));
         
-        // Center panel for grid
+        // Center panel for grid with Material Design container
         centerPanel = new JPanel();
+        centerPanel.setOpaque(false); // Transparent for glassmorphism
         
-        // Bottom panel with scores and current player
-        bottomPanel = new JPanel(new GridLayout(1, 3, 10, 0));
+        // Wrap grid in Material Design container card
+        gridContainer = new GridContainer();
+        gridContainer.add(centerPanel, BorderLayout.CENTER);
         
+        // Bottom panel with Material Design score cards
+        bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 15));
+        bottomPanel.setOpaque(false);
+        
+        // Create score cards
+        player1Card = new ScoreCard(
+            config.getPlayer1().getName().toUpperCase(),
+            "Score: 0",
+            config.getPlayer1().getColor(),
+            false
+        );
+        
+        // Create animated turn indicator (replaces currentTurnCard)
+        turnIndicator = new TurnIndicator(
+            config.getPlayer1().getName(),
+            config.getPlayer1().getColor()
+        );
+        
+        // Keep old currentTurnCard for compatibility (hidden)
+        currentTurnCard = new ScoreCard(
+            "CURRENT TURN",
+            config.getPlayer1().getName(),
+            config.getPlayer1().getColor(),
+            true // Active/elevated
+        );
+        currentTurnCard.setVisible(false);
+        
+        player2Card = new ScoreCard(
+            config.getPlayer2().getName().toUpperCase(),
+            "Score: 0",
+            config.getPlayer2().getColor(),
+            false
+        );
+        
+        bottomPanel.add(player1Card);
+        bottomPanel.add(turnIndicator); // Use new animated turn indicator
+        bottomPanel.add(player2Card);
+        
+        // Keep old labels for compatibility (hidden)
         player1ScoreLabel = new JLabel(config.getPlayer1().getName() + ": 0", SwingConstants.CENTER);
         player1ScoreLabel.setFont(new Font("Arial", Font.BOLD, 18));
         player1ScoreLabel.setForeground(config.getPlayer1().getColor());
+        player1ScoreLabel.setVisible(false);
         
         currentPlayerLabel = new JLabel("Current: " + config.getPlayer1().getName(), SwingConstants.CENTER);
         currentPlayerLabel.setFont(new Font("Arial", Font.BOLD, 18));
         currentPlayerLabel.setForeground(config.getPlayer1().getColor());
+        currentPlayerLabel.setVisible(false);
         
         player2ScoreLabel = new JLabel(config.getPlayer2().getName() + ": 0", SwingConstants.CENTER);
         player2ScoreLabel.setFont(new Font("Arial", Font.BOLD, 18));
         player2ScoreLabel.setForeground(config.getPlayer2().getColor());
-        
-        bottomPanel.add(player1ScoreLabel);
-        bottomPanel.add(currentPlayerLabel);
-        bottomPanel.add(player2ScoreLabel);
+        player2ScoreLabel.setVisible(false);
         
         // Control panel with game flow buttons
-        controlPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
-        controlPanel.setBackground(new Color(240, 240, 245));
+        controlPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        controlPanel.setOpaque(false); // Transparent for glassmorphism
         
-        // Restart button
+        // Create Material Design control cards
+        restartCard = new ControlCard("Restart", "↻", new Color(220, 100, 100), this::handleRestart);
+        undoCard = new ControlCard("Undo", "⟲", new Color(100, 100, 120), this::handleUndo);
+        redoCard = new ControlCard("Redo", "⟳", new Color(100, 100, 120), this::handleRedo);
+        menuCard = new ControlCard("Menu", "≡", new Color(100, 130, 200), this::handleBackToMenu);
+        pauseCard = new ControlCard("Pause", "⏸", new Color(150, 100, 200), this::handlePause);
+        
+        // Initial states
+        undoCard.setEnabled(false);
+        redoCard.setEnabled(false);
+        
+        // Add cards to control panel
+        controlPanel.add(undoCard);
+        controlPanel.add(redoCard);
+        controlPanel.add(restartCard);
+        controlPanel.add(pauseCard);
+        controlPanel.add(menuCard);
+        
+        // Legacy buttons (kept hidden for compatibility)
         restartButton = createControlButton("Restart (R)", new Color(220, 100, 100));
         restartButton.addActionListener(e -> handleRestart());
         restartButton.setToolTipText("Restart the game (R)");
+        restartButton.setVisible(false);
         
-        // Pause button
         pauseButton = createControlButton("Pause (P)", new Color(200, 150, 70));
         pauseButton.addActionListener(e -> handlePause());
         pauseButton.setToolTipText("Pause/Resume game (P)");
+        pauseButton.setVisible(false);
         
-        // Menu button
         menuButton = createControlButton("Menu (ESC)", new Color(100, 130, 200));
         menuButton.addActionListener(e -> handleBackToMenu());
         menuButton.setToolTipText("Back to menu (ESC)");
+        menuButton.setVisible(false);
         
-        // Undo button with icon
         undoButton = createIconButton("undo.png", "Undo (Ctrl+Z)");
         undoButton.addActionListener(e -> handleUndo());
         undoButton.setEnabled(false);
+        undoButton.setVisible(false);
         
-        // Redo button with icon
         redoButton = createIconButton("redo.png", "Redo (Ctrl+Y)");
         redoButton.addActionListener(e -> handleRedo());
         redoButton.setEnabled(false);
+        redoButton.setVisible(false);
         
-        controlPanel.add(undoButton);
-        controlPanel.add(redoButton);
-        controlPanel.add(restartButton);
-        controlPanel.add(pauseButton);
-        controlPanel.add(menuButton);
+        // Create Material Design pause overlay
+        pauseOverlay = new PauseOverlay();
         
-        // Pause overlay label (initially hidden)
+        // Legacy pause overlay label (kept hidden for compatibility)
         pauseOverlayLabel = new JLabel("PAUSED - Press P to Resume");
         pauseOverlayLabel.setFont(new Font("Arial", Font.BOLD, 36));
         pauseOverlayLabel.setForeground(new Color(255, 100, 100));
@@ -283,7 +403,7 @@ public class GamePanel extends JPanel {
         // Main content area
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(topPanel, BorderLayout.NORTH);
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
+        mainPanel.add(gridContainer, BorderLayout.CENTER); // Use Material Design container
         
         // Combine bottom panel and control panel
         JPanel bottomContainer = new JPanel(new BorderLayout());
@@ -291,9 +411,10 @@ public class GamePanel extends JPanel {
         bottomContainer.add(controlPanel, BorderLayout.SOUTH);
         mainPanel.add(bottomContainer, BorderLayout.SOUTH);
         
-        // Use layered pane to overlay pause screen
+        // Use layered pane to overlay pause screen and modal
         setLayout(new OverlayLayout(this));
-        add(pauseOverlayLabel);
+        add(pauseOverlay); // Material Design pause overlay
+        add(pauseOverlayLabel); // Legacy (kept for compatibility)
         add(mainPanel);
     }
     
@@ -341,14 +462,28 @@ public class GamePanel extends JPanel {
             return;
         }
         
+        int row = clickedCell.getRow();
+        int col = clickedCell.getColumn();
+        
+        // Check if the clicked cell is already at maximum value (4)
+        if (gameEngine.getCellValue(row, col) >= 4) {
+            // Invalid move - cell is already maxed out
+            SoundManager.getInstance().playSound(SoundManager.SOUND_ERROR);
+            
+            // Visual feedback: brief flash to show it's not clickable
+            clickedCell.setEnabled(false);
+            Timer flashTimer = new Timer(100, e -> clickedCell.setEnabled(true));
+            flashTimer.setRepeats(false);
+            flashTimer.start();
+            
+            return; // Don't change turn, don't process move
+        }
+        
         // Start timer on first move
         if (!gameStarted) {
             gameTimer.start();
             gameStarted = true;
         }
-        
-        int row = clickedCell.getRow();
-        int col = clickedCell.getColumn();
         
         Player currentPlayer = gameEngine.getGameState().getCurrentPlayer();
         
@@ -538,12 +673,33 @@ public class GamePanel extends JPanel {
         int player2Score = gameEngine.getScore(Player.PLAYER_TWO);
         Player currentPlayer = gameEngine.getGameState().getCurrentPlayer();
         
+        // Calculate max score based on board size (rough estimate: boardSize * boardSize * 3)
+        int boardSize = config.getBoardSize();
+        int estimatedMaxScore = boardSize * boardSize * 3;
+        
         // Get player names and colors from config
         String player1Name = config.getPlayer1().getName();
         String player2Name = config.getPlayer2().getName();
         Color player1Color = config.getPlayer1().getColor();
         Color player2Color = config.getPlayer2().getColor();
         
+        // Update Material Design score cards with progress bars
+        player1Card.setValue("Score: " + player1Score);
+        player1Card.updateScore(player1Score, estimatedMaxScore);
+        
+        player2Card.setValue("Score: " + player2Score);
+        player2Card.updateScore(player2Score, estimatedMaxScore);
+        
+        // Update current turn card
+        if (currentPlayer == Player.PLAYER_ONE) {
+            currentTurnCard.setValue(player1Name);
+            currentTurnCard.setAccentColor(player1Color);
+        } else {
+            currentTurnCard.setValue(player2Name);
+            currentTurnCard.setAccentColor(player2Color);
+        }
+        
+        // Update old labels (for compatibility, hidden)
         player1ScoreLabel.setText(String.format("%s: %d", player1Name, player1Score));
         player1ScoreLabel.setForeground(player1Color);
         
@@ -552,9 +708,17 @@ public class GamePanel extends JPanel {
         
         // Update current player display
         if (currentPlayer == Player.PLAYER_ONE) {
+            // Update animated turn indicator
+            turnIndicator.updatePlayer(player1Name, player1Color);
+            
+            // Update legacy label (kept for compatibility)
             currentPlayerLabel.setText("Current: " + player1Name);
             currentPlayerLabel.setForeground(player1Color);
         } else {
+            // Update animated turn indicator
+            turnIndicator.updatePlayer(player2Name, player2Color);
+            
+            // Update legacy label (kept for compatibility)
             currentPlayerLabel.setText("Current: " + player2Name);
             currentPlayerLabel.setForeground(player2Color);
         }
@@ -750,8 +914,16 @@ public class GamePanel extends JPanel {
      * Updates the enabled state of undo/redo buttons.
      */
     private void updateUndoRedoButtons() {
-        undoButton.setEnabled(commandHistory.canUndo() && !gameEngine.isGameOver());
-        redoButton.setEnabled(commandHistory.canRedo() && !gameEngine.isGameOver());
+        boolean canUndo = commandHistory.canUndo() && !gameEngine.isGameOver();
+        boolean canRedo = commandHistory.canRedo() && !gameEngine.isGameOver();
+        
+        // Update Material Design cards
+        undoCard.setEnabled(canUndo);
+        redoCard.setEnabled(canRedo);
+        
+        // Update legacy buttons (kept for compatibility)
+        undoButton.setEnabled(canUndo);
+        redoButton.setEnabled(canRedo);
     }
     
     /**
@@ -769,9 +941,19 @@ public class GamePanel extends JPanel {
         
         if (isPaused) {
             gameTimer.pause();
+            
+            // Update Material Design pause card
+            pauseCard.setIcon("▶");
+            
+            // Update legacy button (kept for compatibility)
             pauseButton.setText("Resume (P)");
             pauseButton.setBackground(new Color(70, 160, 70));
-            pauseOverlayLabel.setVisible(true);
+            
+            // Show Material Design pause overlay with animation
+            pauseOverlay.showOverlay();
+            
+            // Legacy overlay (kept hidden for compatibility)
+            pauseOverlayLabel.setVisible(false);
             
             // Disable grid interaction
             for (int row = 0; row < gridCells.length; row++) {
@@ -781,8 +963,18 @@ public class GamePanel extends JPanel {
             }
         } else {
             gameTimer.resume();
+            
+            // Update Material Design pause card
+            pauseCard.setIcon("⏸");
+            
+            // Update legacy button (kept for compatibility)
             pauseButton.setText("Pause (P)");
             pauseButton.setBackground(new Color(200, 150, 70));
+            
+            // Hide Material Design pause overlay with animation
+            pauseOverlay.hideOverlay();
+            
+            // Legacy overlay (kept hidden for compatibility)
             pauseOverlayLabel.setVisible(false);
             
             // Re-enable grid interaction

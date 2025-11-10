@@ -3,8 +3,10 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.mycompany</groupId>
     <artifactId>JavaGrid4</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>4.1-ENHANCED-UI</version>
     <packaging>jar</packaging>
+    <name>JavaGrid4</name>
+    <description>Strategic two-player grid game with comprehensive Material Design UI, featuring animated turn indicators, control cards, progress bars, pause modals, lock icons, gradient backgrounds, and smooth animations. Demonstrates advanced Java Swing development with clean architecture and professional polish.</description>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>25</maven.compiler.release>
