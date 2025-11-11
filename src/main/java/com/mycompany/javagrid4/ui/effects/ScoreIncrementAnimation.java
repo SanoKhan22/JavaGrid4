@@ -27,11 +27,11 @@ public class ScoreIncrementAnimation extends JComponent {
     private Timer animationTimer;
     private double progress = 0.0;
     
-    private static final int TOTAL_FRAMES = 20; // ~320ms at 60fps
+    private static final int TOTAL_FRAMES = 12; // ~200ms (optimized for performance)
     private static final int FRAME_DELAY = 16; // 60fps
     
-    // Particle trail
-    private boolean showTrail = true;
+    // Particle trail - disabled for performance
+    private boolean showTrail = false;
     private java.util.List<TrailParticle> trailParticles = new java.util.ArrayList<>();
     
     /**
@@ -72,17 +72,15 @@ public class ScoreIncrementAnimation extends JComponent {
         animationTimer = new Timer(FRAME_DELAY, e -> {
             progress += 1.0 / TOTAL_FRAMES;
             
-            // Add trail particle
-            if (showTrail && progress < 0.8) {
-                Point currentPos = getCurrentPosition();
-                trailParticles.add(new TrailParticle(currentPos, progress));
-            }
+            // Skip trail particles for performance
             
             if (progress >= 1.0) {
                 animationTimer.stop();
                 cleanup();
             } else {
-                repaint();
+                // Optimized repaint - only repaint the affected region
+                Point pos = getCurrentPosition();
+                repaint(pos.x - 50, pos.y - 50, 100, 100);
             }
         });
         
@@ -100,11 +98,7 @@ public class ScoreIncrementAnimation extends JComponent {
         animationTimer = new Timer(FRAME_DELAY, e -> {
             progress += 1.0 / TOTAL_FRAMES;
             
-            // Add trail particle
-            if (showTrail && progress < 0.8) {
-                Point currentPos = getCurrentPosition();
-                trailParticles.add(new TrailParticle(currentPos, progress));
-            }
+            // Skip trail particles for performance
             
             if (progress >= 1.0) {
                 animationTimer.stop();
@@ -113,7 +107,9 @@ public class ScoreIncrementAnimation extends JComponent {
                     onComplete.run();
                 }
             } else {
-                repaint();
+                // Optimized repaint - only repaint the affected region
+                Point pos = getCurrentPosition();
+                repaint(pos.x - 50, pos.y - 50, 100, 100);
             }
         });
         

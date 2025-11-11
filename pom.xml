@@ -9,7 +9,8 @@
     <description>Strategic two-player grid game with comprehensive Material Design UI, featuring animated turn indicators, control cards, progress bars, pause modals, lock icons, gradient backgrounds, and smooth animations. Demonstrates advanced Java Swing development with clean architecture and professional polish.</description>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.release>25</maven.compiler.release>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <exec.mainClass>com.mycompany.javagrid4.JavaGrid4</exec.mainClass>
     </properties>
 </project>

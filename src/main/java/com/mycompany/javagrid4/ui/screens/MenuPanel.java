@@ -451,10 +451,9 @@ public class MenuPanel extends JPanel {
         player1ColorButton.addColorChangeListener(color -> {
             // Check if Player 2 has the same color
             if (color.equals(gameConfig.getPlayer2().getColor())) {
-                JOptionPane.showMessageDialog(this,
-                    "Both players cannot have the same color!\nPlease choose a different color.",
-                    "Color Conflict",
-                    JOptionPane.WARNING_MESSAGE);
+                com.mycompany.javagrid4.ui.dialogs.SimpleDialog.showMessageDialog(this,
+                    "Both players cannot have the same color! Please choose a different color.",
+                    "Color Conflict");
                 // Revert to previous color
                 player1ColorButton.setSelectedColor(gameConfig.getPlayer1().getColor());
             } else {
@@ -466,10 +465,9 @@ public class MenuPanel extends JPanel {
         player2ColorButton.addColorChangeListener(color -> {
             // Check if Player 1 has the same color
             if (color.equals(gameConfig.getPlayer1().getColor())) {
-                JOptionPane.showMessageDialog(this,
-                    "Both players cannot have the same color!\nPlease choose a different color.",
-                    "Color Conflict",
-                    JOptionPane.WARNING_MESSAGE);
+                com.mycompany.javagrid4.ui.dialogs.SimpleDialog.showMessageDialog(this,
+                    "Both players cannot have the same color! Please choose a different color.",
+                    "Color Conflict");
                 // Revert to previous color
                 player2ColorButton.setSelectedColor(gameConfig.getPlayer2().getColor());
             } else {

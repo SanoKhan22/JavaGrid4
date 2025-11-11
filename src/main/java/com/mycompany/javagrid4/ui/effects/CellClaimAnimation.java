@@ -30,7 +30,7 @@ public class CellClaimAnimation {
     private final CustomGridCell cell;
     private Timer animationTimer;
     private int frameCount = 0;
-    private static final int TOTAL_FRAMES = 15; // ~250ms at 60fps
+    private static final int TOTAL_FRAMES = 10; // ~160ms (optimized for performance)
     private AnimationType animationType;
     private Runnable onComplete;
     
@@ -85,7 +85,7 @@ public class CellClaimAnimation {
     }
     
     /**
-     * Pop animation: Cell scales up and down.
+     * Pop animation: Cell scales up and down (optimized).
      */
     private void playPopAnimation() {
         frameCount = 0;
@@ -95,7 +95,7 @@ public class CellClaimAnimation {
             
             // Calculate scale using sine wave for smooth animation
             double progress = frameCount / (double) TOTAL_FRAMES;
-            double scale = 1.0 + (0.3 * Math.sin(progress * Math.PI));
+            double scale = 1.0 + (0.2 * Math.sin(progress * Math.PI)); // Reduced magnitude
             
             // Apply scale to cell
             cell.setAnimationScale(scale);
@@ -114,7 +114,7 @@ public class CellClaimAnimation {
     }
     
     /**
-     * Pulse animation: Glowing aura pulses.
+     * Pulse animation: Glowing aura pulses (optimized).
      */
     private void playPulseAnimation() {
         frameCount = 0;
@@ -122,9 +122,9 @@ public class CellClaimAnimation {
         animationTimer = new Timer(16, e -> {
             frameCount++;
             
-            // Calculate glow intensity
+            // Calculate glow intensity (reduced for performance)
             double progress = frameCount / (double) TOTAL_FRAMES;
-            float glowIntensity = (float) Math.sin(progress * Math.PI);
+            float glowIntensity = (float) (0.7 * Math.sin(progress * Math.PI));
             
             // Apply glow to cell
             cell.setGlowIntensity(glowIntensity);
@@ -143,13 +143,13 @@ public class CellClaimAnimation {
     }
     
     /**
-     * Burst animation: Small particles explode from cell.
+     * Burst animation: Small particles explode from cell (optimized).
      */
     private void playBurstAnimation() {
         frameCount = 0;
         
-        // Create particles
-        int particleCount = 12;
+        // Create fewer particles for performance
+        int particleCount = 8; // Reduced from 12
         BurstParticle[] particles = new BurstParticle[particleCount];
         
         for (int i = 0; i < particleCount; i++) {
@@ -183,7 +183,7 @@ public class CellClaimAnimation {
     }
     
     /**
-     * Combo animation: Combines pop and pulse effects.
+     * Combo animation: Combines pop and pulse effects (optimized).
      */
     private void playComboAnimation() {
         frameCount = 0;
@@ -193,12 +193,12 @@ public class CellClaimAnimation {
             
             double progress = frameCount / (double) TOTAL_FRAMES;
             
-            // Scale effect (pop)
-            double scale = 1.0 + (0.25 * Math.sin(progress * Math.PI));
+            // Simplified scale effect (smaller magnitude)
+            double scale = 1.0 + (0.15 * Math.sin(progress * Math.PI));
             cell.setAnimationScale(scale);
             
-            // Glow effect (pulse)
-            float glowIntensity = (float) Math.sin(progress * Math.PI);
+            // Simplified glow effect (reduced intensity)
+            float glowIntensity = (float) (0.6 * Math.sin(progress * Math.PI));
             cell.setGlowIntensity(glowIntensity);
             
             cell.repaint();

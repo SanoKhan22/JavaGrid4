@@ -9,7 +9,7 @@ dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
 
-# Documentation (Private)
+# Documentation (Private - not pushed to GitHub)
 docs/
 
 # NetBeans

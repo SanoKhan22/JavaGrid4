@@ -2,13 +2,13 @@ package com.mycompany.javagrid4.ui.components;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
 
 /**
- * Material Design pause overlay modal with elegant card design.
+ * Optimized pause overlay modal - clickable to resume, no blur for performance.
  * Displays a centered modal card over a semi-transparent backdrop when game is paused.
+ * Click anywhere to resume the game.
  * 
  * @author JavaGrid4 Team
  * @version 1.0
@@ -23,21 +23,41 @@ public class PauseOverlay extends JPanel {
     private float modalScale;
     private Timer fadeInTimer;
     private boolean isVisible;
+    private Runnable onResumeCallback;
     
     /**
      * Creates a new pause overlay modal.
      */
     public PauseOverlay() {
         this.backdropAlpha = 0.0f;
-        this.modalScale = 0.8f;
+        this.modalScale = 0.85f;
         this.isVisible = false;
         
         setOpaque(false);
         setVisible(false);
+        setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        
+        // Make clickable to resume
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (isVisible && onResumeCallback != null) {
+                    onResumeCallback.run();
+                }
+            }
+        });
     }
     
     /**
-     * Shows the pause overlay with fade-in animation.
+     * Sets the callback to run when user clicks to resume.
+     * @param callback Runnable to execute on resume click
+     */
+    public void setOnResumeCallback(Runnable callback) {
+        this.onResumeCallback = callback;
+    }
+    
+    /**
+     * Shows the pause overlay with optimized fade-in animation.
      */
     public void showOverlay() {
         if (isVisible) return;
@@ -51,24 +71,20 @@ public class PauseOverlay extends JPanel {
         }
         
         fadeInTimer = new Timer(16, new ActionListener() {
+            private int frameCount = 0;
+            private static final int MAX_FRAMES = 8; // ~130ms
+            
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Fade in backdrop
-                if (backdropAlpha < 0.85f) {
-                    backdropAlpha += 0.05f;
-                } else {
+                frameCount++;
+                
+                // Linear interpolation for performance
+                backdropAlpha = Math.min(0.85f, frameCount / (float) MAX_FRAMES * 0.85f);
+                modalScale = Math.min(1.0f, 0.85f + (frameCount / (float) MAX_FRAMES * 0.15f));
+                
+                if (frameCount >= MAX_FRAMES) {
                     backdropAlpha = 0.85f;
-                }
-                
-                // Scale up modal
-                if (modalScale < 1.0f) {
-                    modalScale += 0.05f;
-                } else {
                     modalScale = 1.0f;
-                }
-                
-                // Stop when animation complete
-                if (backdropAlpha >= 0.85f && modalScale >= 1.0f) {
                     fadeInTimer.stop();
                 }
                 
@@ -80,7 +96,7 @@ public class PauseOverlay extends JPanel {
     }
     
     /**
-     * Hides the pause overlay with fade-out animation.
+     * Hides the pause overlay with optimized fade-out animation.
      */
     public void hideOverlay() {
         if (!isVisible) return;
@@ -91,24 +107,21 @@ public class PauseOverlay extends JPanel {
         }
         
         fadeInTimer = new Timer(16, new ActionListener() {
+            private int frameCount = 0;
+            private static final int MAX_FRAMES = 6; // ~100ms
+            
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Fade out backdrop
-                if (backdropAlpha > 0.0f) {
-                    backdropAlpha -= 0.08f;
-                } else {
+                frameCount++;
+                
+                // Linear fade out for performance
+                backdropAlpha = Math.max(0.0f, 0.85f - (frameCount / (float) MAX_FRAMES * 0.85f));
+                modalScale = Math.max(0.85f, 1.0f - (frameCount / (float) MAX_FRAMES * 0.15f));
+                
+                // Stop and hide when animation complete
+                if (frameCount >= MAX_FRAMES) {
                     backdropAlpha = 0.0f;
-                }
-                
-                // Scale down modal
-                if (modalScale > 0.8f) {
-                    modalScale -= 0.08f;
-                } else {
-                    modalScale = 0.8f;
-                }
-                
-                // Hide when animation complete
-                if (backdropAlpha <= 0.0f && modalScale <= 0.8f) {
+                    modalScale = 0.85f;
                     fadeInTimer.stop();
                     setVisible(false);
                     isVisible = false;
@@ -227,10 +240,10 @@ public class PauseOverlay extends JPanel {
         int textWidth = fm.stringWidth(pausedText);
         g2d.drawString(pausedText, centerX - textWidth / 2, y + 150);
         
-        // Draw instruction text
+        // Draw instruction text - click or press P
         g2d.setFont(new Font("Arial", Font.PLAIN, 16));
         g2d.setColor(new Color(120, 120, 140));
-        String instructionText = "Press P to Resume";
+        String instructionText = "Click anywhere or press P to resume";
         fm = g2d.getFontMetrics();
         textWidth = fm.stringWidth(instructionText);
         g2d.drawString(instructionText, centerX - textWidth / 2, y + 190);

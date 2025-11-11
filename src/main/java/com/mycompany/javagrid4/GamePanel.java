@@ -301,8 +301,9 @@ public class GamePanel extends JPanel {
         redoButton.setEnabled(false);
         redoButton.setVisible(false);
         
-        // Create Material Design pause overlay
+        // Create optimized pause overlay with click-to-resume
         pauseOverlay = new PauseOverlay();
+        pauseOverlay.setOnResumeCallback(() -> handlePause());
         
         // Legacy pause overlay label (kept hidden for compatibility)
         pauseOverlayLabel = new JLabel("PAUSED - Press P to Resume");
@@ -544,13 +545,12 @@ public class GamePanel extends JPanel {
     private boolean checkForNewlyClaimedCells(int row, int col, int[] valuesBefore) {
         int gridSize = gameEngine.getGridSize();
         boolean anyNewlyClaimed = false;
-        Player currentPlayer = gameEngine.getGameState().getCurrentPlayer();
         
         // Check clicked cell - animate only if it JUST reached 4
         int currentValue = gameEngine.getCellValue(row, col);
         if (currentValue == 4 && valuesBefore[0] < 4) {
             gridCells[row][col].playClaimAnimation();
-            animateScoreIncrement(gridCells[row][col], currentPlayer, 1);
+            // No flying animation - instant score update
             anyNewlyClaimed = true;
         }
         
@@ -559,7 +559,7 @@ public class GamePanel extends JPanel {
             currentValue = gameEngine.getCellValue(row - 1, col);
             if (currentValue == 4 && valuesBefore[1] < 4) {
                 gridCells[row - 1][col].playClaimAnimation();
-                animateScoreIncrement(gridCells[row - 1][col], currentPlayer, 1);
+                // No flying animation - instant score update
                 anyNewlyClaimed = true;
             }
         }
@@ -569,7 +569,7 @@ public class GamePanel extends JPanel {
             currentValue = gameEngine.getCellValue(row + 1, col);
             if (currentValue == 4 && valuesBefore[2] < 4) {
                 gridCells[row + 1][col].playClaimAnimation();
-                animateScoreIncrement(gridCells[row + 1][col], currentPlayer, 1);
+                // No flying animation - instant score update
                 anyNewlyClaimed = true;
             }
         }
@@ -579,7 +579,7 @@ public class GamePanel extends JPanel {
             currentValue = gameEngine.getCellValue(row, col - 1);
             if (currentValue == 4 && valuesBefore[3] < 4) {
                 gridCells[row][col - 1].playClaimAnimation();
-                animateScoreIncrement(gridCells[row][col - 1], currentPlayer, 1);
+                // No flying animation - instant score update
                 anyNewlyClaimed = true;
             }
         }
@@ -589,7 +589,7 @@ public class GamePanel extends JPanel {
             currentValue = gameEngine.getCellValue(row, col + 1);
             if (currentValue == 4 && valuesBefore[4] < 4) {
                 gridCells[row][col + 1].playClaimAnimation();
-                animateScoreIncrement(gridCells[row][col + 1], currentPlayer, 1);
+                // No flying animation - instant score update
                 anyNewlyClaimed = true;
             }
         }
@@ -839,12 +839,12 @@ public class GamePanel extends JPanel {
         
         SoundManager.getInstance().playSound(SoundManager.SOUND_BUTTON);
         
-        int choice = JOptionPane.showConfirmDialog(
+        int choice = com.mycompany.javagrid4.ui.dialogs.SimpleDialog.showConfirmDialog(
             this,
-            "Are you sure you want to restart the game?\nAll progress will be lost.",
+            "Are you sure you want to restart the game? All progress will be lost.",
             "Restart Game",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.WARNING_MESSAGE
+            "Restart",
+            "Cancel"
         );
         
         if (choice == JOptionPane.YES_OPTION) {
@@ -1016,12 +1016,12 @@ public class GamePanel extends JPanel {
             return;
         }
         
-        int choice = JOptionPane.showConfirmDialog(
+        int choice = com.mycompany.javagrid4.ui.dialogs.SimpleDialog.showConfirmDialog(
             this,
-            "Are you sure you want to return to the menu?\nAll progress will be lost.",
+            "Are you sure you want to return to the menu? All progress will be lost.",
             "Back to Menu",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.WARNING_MESSAGE
+            "Leave Game",
+            "Stay"
         );
         
         if (choice == JOptionPane.YES_OPTION) {

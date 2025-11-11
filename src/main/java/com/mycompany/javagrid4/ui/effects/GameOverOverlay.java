@@ -22,8 +22,8 @@ public class GameOverOverlay extends JComponent {
     private Timer animationTimer;
     private double fadeProgress = 0.0;
     private double scaleProgress = 0.0;
-    private static final int FADE_FRAMES = 15;  // 0.25 seconds
-    private static final int HOLD_FRAMES = 120; // 2 seconds
+    private static final int FADE_FRAMES = 10;  // 0.16 seconds (optimized)
+    private static final int HOLD_FRAMES = 60;  // 1.0 second (optimized)
     private static final int TOTAL_FRAMES = FADE_FRAMES + HOLD_FRAMES;
     private int frameCount = 0;
     
