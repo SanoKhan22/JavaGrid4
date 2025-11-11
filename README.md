@@ -47,6 +47,22 @@ Watch the full gameplay experience from setup to victory!
 
 ---
 
+## 💡 Open for Improvements
+
+This project represents my recommended implementation and design choices. However, **I welcome contributions and improvements!** 
+
+Feel free to:
+- 🎨 Suggest UI/UX enhancements
+- ⚡ Optimize performance further
+- 🐛 Report bugs or edge cases
+- ✨ Propose new features
+- � Improve game mechanics
+- 📚 Enhance documentation
+
+**Found something that could be better?** Open an issue or submit a pull request! I'm always open to learning and improving the codebase.
+
+---
+
 ## �🎲 Game Rules
 
 ### Objective
@@ -487,6 +503,41 @@ This project demonstrates my expertise in:
 - UI/UX Engineer
 - Software Architect
 - Game Developer
+
+---
+
+## 🤝 Contributing
+
+While this is a portfolio project showcasing my skills, **I welcome contributions and improvements!** 
+
+This represents my recommended implementation, but there's always room for enhancement. Whether you're a fellow developer, a recruiter exploring the code, or someone interested in the project, your input is valuable.
+
+### How to Contribute
+
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/improvement`)
+3. **Make your changes** with clear commit messages
+4. **Test thoroughly** to ensure nothing breaks
+5. **Submit a pull request** with a description of your improvements
+
+### Areas Open for Enhancement
+
+- 🎨 **UI/UX improvements** - Alternative themes, color schemes, layouts
+- ⚡ **Performance optimizations** - Further animation improvements, memory optimization
+- 🎮 **Game features** - AI opponent, multiplayer, new game modes
+- 🐛 **Bug fixes** - Edge cases, error handling improvements
+- 📱 **Accessibility** - Screen reader support, keyboard navigation enhancements
+- 🌐 **Internationalization** - Multi-language support
+- 📚 **Documentation** - Code examples, tutorials, architecture diagrams
+
+### Code Quality Standards
+
+Please maintain:
+- ✅ Clean code principles and naming conventions
+- ✅ Comprehensive JavaDoc comments
+- ✅ Separation of concerns (MVC architecture)
+- ✅ Consistent code formatting
+- ✅ No Swing imports in business logic classes
 
 ---
 
